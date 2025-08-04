@@ -1,0 +1,511 @@
+openapi: 3.0.3
+info:
+  title: Insforge Storage API
+  version: 2.0.0
+  description: Bucket-based storage system similar to S3
+
+paths:
+  /api/storage/buckets:
+    get:
+      summary: List all buckets
+      security:
+        - apiKey: []
+      responses:
+        '200':
+          description: List of bucket names
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  buckets:
+                    type: array
+                    items:
+                      type: string
+                    example: ["avatars", "documents", "uploads"]
+              example:
+                buckets: ["avatars", "documents", "uploads", "public", "private"]
+
+    post:
+      summary: Create a new bucket
+      security:
+        - apiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - bucket_name
+              properties:
+                bucket_name:
+                  type: string
+                  pattern: '^[a-zA-Z0-9_-]+$'
+                  description: Bucket name (alphanumeric, underscore, and hyphen only)
+                  example: avatars
+                is_public:
+                  type: boolean
+                  description: Whether the bucket is publicly accessible
+                  default: true
+                  example: true
+      responses:
+        '201':
+          description: Bucket created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Bucket created successfully"
+                  bucket_name:
+                    type: string
+                    example: avatars
+              example:
+                message: "Bucket created successfully"
+                bucket: "avatars"
+        '400':
+          description: Invalid bucket name
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "INVALID_BUCKET_NAME"
+                message: "Bucket name must contain only alphanumeric characters, underscores, and hyphens"
+                statusCode: 400
+                nextAction: "Use a valid bucket name format"
+        '409':
+          description: Bucket already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "BUCKET_EXISTS"
+                message: "Bucket 'avatars' already exists"
+                statusCode: 409
+                nextAction: "Choose a different bucket name"
+
+  /api/storage/buckets/{bucket}:
+    patch:
+      summary: Update bucket visibility
+      security:
+        - apiKey: []
+      parameters:
+        - name: bucket
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          example: avatars
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - is_public
+              properties:
+                is_public:
+                  type: boolean
+                  description: Whether the bucket should be publicly accessible
+                  example: true
+      responses:
+        '200':
+          description: Bucket visibility updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Bucket visibility updated"
+                  bucket:
+                    type: string
+                    example: avatars
+                  is_public:
+                    type: boolean
+                    example: true
+              example:
+                message: "Bucket visibility updated"
+                bucket: "avatars"
+                is_public: true
+        '404':
+          description: Bucket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "BUCKET_NOT_FOUND"
+                message: "Bucket 'nonexistent' does not exist"
+                statusCode: 404
+                nextAction: "Check bucket name and try again"
+
+  /api/storage/{bucket}:
+    get:
+      summary: List objects in bucket
+      security:
+        - apiKey: []
+      parameters:
+        - name: bucket
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          example: avatars
+        - name: prefix
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter objects by key prefix
+          example: users/
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 100
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of objects in bucket
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: Total number of objects in the bucket
+            X-Page:
+              schema:
+                type: integer
+              description: Current page number
+            X-Page-Size:
+              schema:
+                type: integer
+              description: Number of items per page
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bucket:
+                    type: string
+                    example: avatars
+                  prefix:
+                    type: string
+                    example: users/
+                  objects:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StoredFile'
+              example:
+                bucket: "avatars"
+                prefix: "users/"
+                objects:
+                  - bucket: "avatars"
+                    key: "users/user123.jpg"
+                    size: 102400
+                    mime_type: "image/jpeg"
+                    uploaded_at: "2024-01-15T10:30:00Z"
+                    url: "/api/storage/avatars/users/user123.jpg"
+                  - bucket: "avatars"
+                    key: "users/user456.png"
+                    size: 204800
+                    mime_type: "image/png"
+                    uploaded_at: "2024-01-16T11:00:00Z"
+                    url: "/api/storage/avatars/users/user456.png"
+
+    delete:
+      summary: Delete entire bucket and all its objects
+      security:
+        - apiKey: []
+      parameters:
+        - name: bucket
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          example: avatars
+      responses:
+        '200':
+          description: Bucket deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "Bucket deleted successfully"
+        '404':
+          description: Bucket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "BUCKET_NOT_FOUND"
+                message: "Bucket 'nonexistent' does not exist"
+                statusCode: 404
+                nextAction: "Check bucket name and try again"
+
+  /api/storage/{bucket}/{key}:
+    put:
+      summary: Upload object to bucket
+      security:
+        - apiKey: []
+      parameters:
+        - name: bucket
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          example: avatars
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          example: user123.jpg
+          description: Object key (can include forward slashes for pseudo-folders)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File to upload
+              required:
+                - file
+      responses:
+        '201':
+          description: Object uploaded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoredFile'
+              example:
+                bucket: "avatars"
+                key: "user123.jpg"
+                size: 102400
+                mime_type: "image/jpeg"
+                uploaded_at: "2024-01-21T10:30:00Z"
+                url: "/api/storage/avatars/user123.jpg"
+        '400':
+          description: Invalid bucket name, key, or file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "INVALID_FILE"
+                message: "No file provided in the request"
+                statusCode: 400
+                nextAction: "Include a file in the multipart form data"
+        '404':
+          description: Bucket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "BUCKET_NOT_FOUND"
+                message: "Bucket 'nonexistent' does not exist"
+                statusCode: 404
+                nextAction: "Create the bucket first"
+
+    get:
+      summary: Download object from bucket
+      security:
+        - apiKey: []
+      parameters:
+        - name: bucket
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          example: avatars
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          example: user123.jpg
+      responses:
+        '200':
+          description: File content
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Type:
+              schema:
+                type: string
+              description: MIME type of the file
+            Content-Length:
+              schema:
+                type: integer
+              description: Size of the file in bytes
+        '404':
+          description: Object not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "OBJECT_NOT_FOUND"
+                message: "Object 'user123.jpg' not found in bucket 'avatars'"
+                statusCode: 404
+                nextAction: "Check the bucket and key combination"
+
+    delete:
+      summary: Delete object from bucket
+      security:
+        - apiKey: []
+      parameters:
+        - name: bucket
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          example: avatars
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          example: user123.jpg
+      responses:
+        '200':
+          description: Object deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: "Object deleted successfully"
+        '404':
+          description: Object not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "OBJECT_NOT_FOUND"
+                message: "Object 'user123.jpg' not found in bucket 'avatars'"
+                statusCode: 404
+                nextAction: "Check the bucket and key combination"
+
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  schemas:
+    StoredFile:
+      type: object
+      properties:
+        bucket:
+          type: string
+          example: avatars
+          description: Name of the bucket containing the object
+        key:
+          type: string
+          example: user123.jpg
+          description: Unique key identifying the object within the bucket
+        size:
+          type: integer
+          example: 102400
+          description: Size of the file in bytes
+        mime_type:
+          type: string
+          example: image/jpeg
+          description: MIME type of the file
+        uploaded_at:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+          description: ISO timestamp when the file was uploaded
+        url:
+          type: string
+          example: "/api/storage/avatars/user123.jpg"
+          description: URL to download the file
+      required:
+        - bucket
+        - key
+        - size
+        - uploaded_at
+        - url
+
+    Pagination:
+      type: object
+      properties:
+        limit:
+          type: integer
+          example: 100
+        offset:
+          type: integer
+          example: 0
+        total:
+          type: integer
+          example: 1
+      required:
+        - limit
+        - offset
+        - total
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - statusCode
+      properties:
+        error:
+          type: string
+          description: Error code for programmatic handling
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid request"
+        statusCode:
+          type: integer
+          description: HTTP status code
+          example: 400
+        nextAction:
+          type: string
+          description: Suggested action to resolve the error
+          example: "Check your request parameters"

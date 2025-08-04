@@ -15,18 +15,11 @@
         "groups": [
           {
             "group": "Getting started",
-            "pages": [
-              "index",
-              "quickstart",
-              "development"
-            ]
+            "pages": ["index", "quickstart", "development"]
           },
           {
             "group": "Customization",
-            "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
+            "pages": ["essentials/settings", "essentials/navigation"]
           },
           {
             "group": "Writing content",
@@ -52,17 +45,82 @@
         "groups": [
           {
             "group": "API documentation",
+            "pages": ["api-reference/introduction"]
+          },
+          {
+            "group": "Tables",
             "pages": [
-              "api-reference/introduction"
+              "api-reference/tables/get-field-types",
+              "api-reference/tables/list-tables",
+              "api-reference/tables/create-table",
+              "api-reference/tables/get-table-schema",
+              "api-reference/tables/modify-table",
+              "api-reference/tables/delete-table"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Authentication",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api-reference/auth/register",
+              "api-reference/auth/login",
+              "api-reference/auth/admin-login",
+              "api-reference/auth/get-current-user",
+              "api-reference/auth/google-auth",
+              "api-reference/auth/github-auth",
+              "api-reference/auth/oauth-callback",
+              "api-reference/auth/get-users"
+            ]
+          },
+          {
+            "group": "Profiles",
+            "pages": [
+              "api-reference/profiles/get-my-profile",
+              "api-reference/profiles/update-my-profile",
+              "api-reference/profiles/search-profiles",
+              "api-reference/profiles/get-user-profile"
+            ]
+          },
+          {
+            "group": "Records",
+            "pages": [
+              "api-reference/records/get-records",
+              "api-reference/records/create-record",
+              "api-reference/records/update-record",
+              "api-reference/records/delete-record"
+            ]
+          },
+          {
+            "group": "Storage",
+            "pages": [
+              "api-reference/storage/list-buckets",
+              "api-reference/storage/create-bucket",
+              "api-reference/storage/delete-bucket",
+              "api-reference/storage/list-files",
+              "api-reference/storage/upload-file",
+              "api-reference/storage/get-file",
+              "api-reference/storage/delete-file"
+            ]
+          },
+          {
+            "group": "Logs",
+            "pages": [
+              "api-reference/logs/create-log",
+              "api-reference/logs/get-logs",
+              "api-reference/logs/get-log-stats"
+            ]
+          },
+          {
+            "group": "Metadata",
+            "pages": [
+              "api-reference/metadata/get-metadata",
+              "api-reference/metadata/get-database-info",
+              "api-reference/metadata/verify-api-key"
+            ]
+          },
+          {
+            "group": "Health",
+            "pages": [
+              "api-reference/health/health-check"
             ]
           }
         ]
@@ -107,15 +165,15 @@
   },
   "contextual": {
     "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
   },
   "footer": {
     "socials": {

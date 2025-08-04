@@ -1,0 +1,382 @@
+openapi: 3.0.3
+info:
+  title: Insforge Records API
+  version: 1.0.0
+
+paths:
+  /api/database/{table}:
+    get:
+      summary: List records
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+          description: Number of records to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Number of records to skip
+        - name: order
+          in: query
+          schema:
+            type: string
+          description: Sort order (e.g., "created_at.desc")
+        - name: select
+          in: query
+          schema:
+            type: string
+          description: Comma-separated list of columns to return
+      responses:
+        '200':
+          description: List of records with pagination
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: Total number of records in the table
+            X-Page:
+              schema:
+                type: integer
+              description: Current page number (calculated from offset/limit)
+            X-Page-Size:
+              schema:
+                type: integer
+              description: Number of items per page (limit)
+            X-Total-Pages:
+              schema:
+                type: integer
+              description: Total number of pages
+            Content-Range:
+              schema:
+                type: string
+              description: Range of records returned (e.g., "0-99/1234")
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+              example:
+                - id: "123e4567-e89b-12d3-a456-426614174000"
+                  title: "First Post"
+                  content: "This is the content"
+                  created_at: "2024-01-01T00:00:00Z"
+                  updated_at: "2024-01-01T00:00:00Z"
+                - id: "223e4567-e89b-12d3-a456-426614174001"
+                  title: "Second Post"
+                  content: "More content here"
+                  created_at: "2024-01-02T00:00:00Z"
+                  updated_at: "2024-01-02T00:00:00Z"
+        '404':
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "TABLE_NOT_FOUND"
+                message: "Table 'nonexistent' does not exist"
+                statusCode: 404
+                nextAction: "Check table name and try again"
+
+    post:
+      summary: Create records
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - records
+              properties:
+                records:
+                  type: array
+                  items:
+                    type: object
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                data:
+                  type: string
+      responses:
+        '201':
+          description: Records created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ids:
+                    type: array
+                    items:
+                      type: string
+                    description: IDs of created records
+                  records:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                    description: Full created records with all fields
+              example:
+                ids: 
+                  - "123e4567-e89b-12d3-a456-426614174000"
+                  - "223e4567-e89b-12d3-a456-426614174001"
+                records:
+                  - id: "123e4567-e89b-12d3-a456-426614174000"
+                    title: "New Post"
+                    content: "Content here"
+                    created_at: "2024-01-21T10:30:00Z"
+                    updated_at: "2024-01-21T10:30:00Z"
+                  - id: "223e4567-e89b-12d3-a456-426614174001"
+                    title: "Another Post"
+                    content: "More content"
+                    created_at: "2024-01-21T10:30:00Z"
+                    updated_at: "2024-01-21T10:30:00Z"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "VALIDATION_ERROR"
+                message: "Missing required field: title"
+                statusCode: 400
+                nextAction: "Include all required fields in the request"
+        '404':
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "TABLE_NOT_FOUND"
+                message: "Table 'posts' does not exist"
+                statusCode: 404
+                nextAction: "Create the table first using /api/tables endpoint"
+
+  /api/database/{table}?id=eq.{id}:
+    get:
+      summary: Get single record
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Record details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                description: Array with single record (PostgREST compatibility)
+              example:
+                - id: "123e4567-e89b-12d3-a456-426614174000"
+                  title: "First Post"
+                  content: "This is the content"
+                  author_id: "user-123"
+                  created_at: "2024-01-01T00:00:00Z"
+                  updated_at: "2024-01-21T10:30:00Z"
+        '404':
+          description: Record not found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                description: Empty array when record not found
+              example: []
+
+    patch:
+      summary: Update record
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                data:
+                  type: string
+      responses:
+        '200':
+          description: Record updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                description: Array with updated record (PostgREST compatibility)
+              example:
+                - id: "123e4567-e89b-12d3-a456-426614174000"
+                  title: "Updated Post Title"
+                  content: "Updated content"
+                  author_id: "user-123"
+                  created_at: "2024-01-01T00:00:00Z"
+                  updated_at: "2024-01-21T11:00:00Z"
+        '404':
+          description: Record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "RECORD_NOT_FOUND"
+                message: "Record with id '123' not found in table 'posts'"
+                statusCode: 404
+                nextAction: "Check the record ID and try again"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "VALIDATION_ERROR"
+                message: "Invalid field type: expected integer for 'view_count'"
+                statusCode: 400
+                nextAction: "Ensure field types match the table schema"
+
+    delete:
+      summary: Delete record
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Record deleted
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+                description: Array with deleted record (PostgREST compatibility)
+              example:
+                - id: "123e4567-e89b-12d3-a456-426614174000"
+                  title: "Deleted Post"
+                  content: "This was deleted"
+                  author_id: "user-123"
+                  created_at: "2024-01-01T00:00:00Z"
+                  updated_at: "2024-01-21T10:30:00Z"
+        '404':
+          description: Record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "RECORD_NOT_FOUND"
+                message: "Record with id '123' not found in table 'posts'"
+                statusCode: 404
+                nextAction: "Check the record ID and try again"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - statusCode
+      properties:
+        error:
+          type: string
+          description: Error code for programmatic handling
+        message:
+          type: string
+          description: Human-readable error message
+        statusCode:
+          type: integer
+          description: HTTP status code
+        nextAction:
+          type: string
+          description: Suggested action to resolve the error

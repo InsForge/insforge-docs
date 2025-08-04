@@ -1,0 +1,218 @@
+openapi: 3.0.3
+info:
+  title: Insforge Logs API
+  version: 1.0.0
+
+paths:
+  /api/logs:
+    get:
+      summary: List activity logs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [INSERT, UPDATE, DELETE, LOGIN]
+          description: Filter by action type
+        - name: table
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of logs with pagination
+          headers:
+            X-Total-Count:
+              schema:
+                type: integer
+              description: Total number of logs
+            X-Page:
+              schema:
+                type: integer
+              description: Current page number
+            X-Page-Size:
+              schema:
+                type: integer
+              description: Number of items per page
+            X-Total-Pages:
+              schema:
+                type: integer
+              description: Total number of pages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+                    action:
+                      type: string
+                      enum: [INSERT, UPDATE, DELETE, LOGIN]
+                    table:
+                      type: string
+                      nullable: true
+                    record_id:
+                      type: string
+                      nullable: true
+                    user_id:
+                      type: string
+                    details:
+                      type: object
+                      nullable: true
+              example:
+                - id: "log-123"
+                  timestamp: "2024-01-21T10:30:00Z"
+                  action: "INSERT"
+                  table: "posts"
+                  record_id: "post-456"
+                  user_id: "user-789"
+                  details:
+                    title: "New Post"
+                    author: "John Doe"
+                - id: "log-124"
+                  timestamp: "2024-01-21T10:31:00Z"
+                  action: "LOGIN"
+                  table: null
+                  record_id: null
+                  user_id: "user-789"
+                  details:
+                    ip: "192.168.1.1"
+                    user_agent: "Mozilla/5.0..."
+
+    delete:
+      summary: Clear logs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: before
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Logs cleared
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  deleted_count:
+                    type: integer
+              example:
+                message: "Logs cleared successfully"
+                deleted_count: 150
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "INVALID_DATE"
+                message: "Invalid date format for 'before' parameter"
+                statusCode: 400
+                nextAction: "Use ISO 8601 date format (YYYY-MM-DDTHH:mm:ssZ)"
+
+  /api/logs/stats:
+    get:
+      summary: Get logs statistics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logs statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actionStats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        action:
+                          type: string
+                        count:
+                          type: integer
+                  tableStats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        table_name:
+                          type: string
+                        count:
+                          type: integer
+                  recentActivity:
+                    type: integer
+                    description: Count of logs in last 24 hours
+                  totalLogs:
+                    type: integer
+                    description: Total number of logs
+              example:
+                actionStats:
+                  - action: "INSERT"
+                    count: 245
+                  - action: "UPDATE"
+                    count: 189
+                  - action: "DELETE"
+                    count: 34
+                  - action: "LOGIN"
+                    count: 567
+                tableStats:
+                  - table_name: "posts"
+                    count: 156
+                  - table_name: "users"
+                    count: 89
+                  - table_name: "comments"
+                    count: 223
+                recentActivity: 47
+                totalLogs: 1035
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - statusCode
+      properties:
+        error:
+          type: string
+          description: Error code for programmatic handling
+        message:
+          type: string
+          description: Human-readable error message
+        statusCode:
+          type: integer
+          description: HTTP status code
+        nextAction:
+          type: string
+          description: Suggested action to resolve the error

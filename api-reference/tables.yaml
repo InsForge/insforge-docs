@@ -1,0 +1,403 @@
+openapi: 3.0.3
+info:
+  title: Insforge Tables API
+  version: 1.0.0
+
+paths:
+  /api/tables/field-types:
+    get:
+      summary: Get available field types
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      responses:
+        '200':
+          description: List of available field types with SQL type mappings
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: object
+                  properties:
+                    sqlType:
+                      type: string
+                    defaultValue:
+                      type: string
+              example:
+                string:
+                  sqlType: TEXT
+                  defaultValue: "''"
+                integer:
+                  sqlType: INTEGER
+                  defaultValue: "0"
+                uuid:
+                  sqlType: TEXT
+                  defaultValue: gen_random_uuid()
+                boolean:
+                  sqlType: BOOLEAN
+                  defaultValue: "false"
+                datetime:
+                  sqlType: TIMESTAMPTZ
+                  defaultValue: "CURRENT_TIMESTAMP"
+                json:
+                  sqlType: JSONB
+                  defaultValue: "'{}'"
+                float:
+                  sqlType: REAL
+                  defaultValue: "0.0"
+                file:
+                  sqlType: TEXT
+                  defaultValue: "null"
+
+  /api/tables:
+    get:
+      summary: List tables
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      responses:
+        '200':
+          description: List of table names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              example:
+                - "users"
+                - "posts"
+                - "comments"
+                - "categories"
+
+    post:
+      summary: Create table
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - table_name
+                - columns
+              properties:
+                table_name:
+                  type: string
+                columns:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - name
+                      - type
+                      - nullable
+                    properties:
+                      name:
+                        type: string
+                      type:
+                        type: string
+                        enum: [string, datetime, integer, float, boolean, uuid, json, file]
+                      nullable:
+                        type: boolean
+                      unique:
+                        type: boolean
+                      defaultValue:
+                        type: string
+                      foreign_key:
+                        type: object
+                        properties:
+                          table:
+                            type: string
+                          column:
+                            type: string
+                          on_delete:
+                            type: string
+                            enum: [CASCADE, SET NULL, NO ACTION, RESTRICT]
+                            default: NO ACTION
+      responses:
+        '201':
+          description: Table created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  table_name:
+                    type: string
+              example:
+                message: "Table created successfully"
+                table_name: "posts"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "VALIDATION_ERROR"
+                message: "Table name already exists"
+                statusCode: 400
+                nextAction: "Choose a different table name"
+        '422':
+          description: Unprocessable entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "INVALID_FIELD_TYPE"
+                message: "Invalid field type: 'text'. Valid types are: string, integer, float, boolean, datetime, uuid, json, file"
+                statusCode: 422
+                nextAction: "Use one of the valid field types"
+
+  /api/tables/{table}/schema:
+    get:
+      summary: Get table schema
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Table schema
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  table_name:
+                    type: string
+                  columns:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: string
+                        nullable:
+                          type: boolean
+                        unique:
+                          type: boolean
+                        default:
+                          type: string
+                          nullable: true
+                        is_primary_key:
+                          type: boolean
+                        foreign_key:
+                          type: object
+                          nullable: true
+                          properties:
+                            table:
+                              type: string
+                            column:
+                              type: string
+                            on_delete:
+                              type: string
+              example:
+                table_name: "posts"
+                columns:
+                  - name: "id"
+                    type: "uuid"
+                    nullable: false
+                    unique: true
+                    default: "gen_random_uuid()"
+                    is_primary_key: true
+                    foreign_key: null
+                  - name: "title"
+                    type: "string"
+                    nullable: false
+                    unique: false
+                    default: null
+                    is_primary_key: false
+                    foreign_key: null
+                  - name: "user_id"
+                    type: "uuid"
+                    nullable: false
+                    unique: false
+                    default: null
+                    is_primary_key: false
+                    foreign_key:
+                      table: "users"
+                      column: "id"
+                      on_delete: "CASCADE"
+        '404':
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "TABLE_NOT_FOUND"
+                message: "Table 'nonexistent' does not exist"
+                statusCode: 404
+                nextAction: "Check table name and try again"
+
+  /api/tables/{table}:
+    patch:
+      summary: Modify table schema
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                add_columns:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      type:
+                        type: string
+                      nullable:
+                        type: boolean
+                      default_value:
+                        type: string
+                drop_columns:
+                  type: array
+                  items:
+                    type: string
+                rename_columns:
+                  type: object
+                  additionalProperties:
+                    type: string
+      responses:
+        '200':
+          description: Table modified
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  table_name:
+                    type: string
+                  modifications:
+                    type: object
+                    properties:
+                      added_columns:
+                        type: array
+                        items:
+                          type: string
+                      dropped_columns:
+                        type: array
+                        items:
+                          type: string
+                      renamed_columns:
+                        type: object
+                        additionalProperties:
+                          type: string
+              example:
+                message: "Table modified successfully"
+                table_name: "posts"
+                modifications:
+                  added_columns: ["published_at"]
+                  dropped_columns: ["draft"]
+                  renamed_columns:
+                    content: "body"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "COLUMN_EXISTS"
+                message: "Column 'title' already exists in table 'posts'"
+                statusCode: 400
+                nextAction: "Choose a different column name or drop it first"
+
+    delete:
+      summary: Delete table
+      security:
+        - bearerAuth: []
+        - apiKey: []
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Table deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  table_name:
+                    type: string
+              example:
+                message: "Table deleted successfully"
+                table_name: "posts"
+        '404':
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "TABLE_NOT_FOUND"
+                message: "Table 'nonexistent' does not exist"
+                statusCode: 404
+                nextAction: "Check table name and try again"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+  
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - statusCode
+      properties:
+        error:
+          type: string
+          description: Error code for programmatic handling
+        message:
+          type: string
+          description: Human-readable error message
+        statusCode:
+          type: integer
+          description: HTTP status code
+        nextAction:
+          type: string
+          description: Suggested action to resolve the error

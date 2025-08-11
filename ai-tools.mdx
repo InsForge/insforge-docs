@@ -176,6 +176,8 @@ No backend coding required. The AI handles it all.
 
 ### Custom API URL
 
+If you're hosting InsForge on a different server or port:
+
 ```json
 {
   "insforge": {
@@ -188,28 +190,3 @@ No backend coding required. The AI handles it all.
   }
 }
 ```
-
-### Multiple Projects
-
-```json
-{
-  "project1": {
-    "command": "npx",
-    "args": ["@insforge/mcp-server"],
-    "env": {
-      "API_KEY": "KEY1",
-      "API_BASE_URL": "http://localhost:7130"
-    }
-  },
-  "project2": {
-    "command": "npx",
-    "args": ["@insforge/mcp-server"],
-    "env": {
-      "API_KEY": "KEY2",
-      "API_BASE_URL": "http://localhost:8130"
-    }
-  }
-}
-```
-
-The AI will ask which project to use.

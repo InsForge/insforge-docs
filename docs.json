@@ -7,7 +7,7 @@
     "light": "#07C983",
     "dark": "#15803D"
   },
-  "modeToggle": {
+  "appearance": {
     "default": "dark"
   },
   "favicon": "/favicon.svg",
@@ -149,8 +149,8 @@
           "icon": "discord"
         },
         {
-          "anchor": "Blog (Coming Soon)",
-          "href": "https://insforge.com",
+          "anchor": "Blog",
+          "href": "https://insforge.dev/blogs",
           "icon": "newspaper"
         }
       ]
@@ -158,19 +158,20 @@
   },
   "logo": {
     "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "dark": "/logo/dark.svg",
+    "href": "https://insforge.dev"
   },
   "navbar": {
     "links": [
       {
         "label": "Support",
-        "href": "mailto:support@insforge.com"
+        "href": "mailto:info@insforge.dev"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://dashboard.insforge.com"
+      "href": "https://insforge.dev/dashboard"
     }
   },
   "contextual": {

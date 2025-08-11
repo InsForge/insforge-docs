@@ -1,0 +1,354 @@
+---
+title: User Management
+description: Manage users, profiles, and admin operations
+---
+
+# User Management
+
+Manage user accounts, profiles, and admin operations. The user table is protected and managed through the Auth API.
+
+## User Data Structure
+
+```typescript
+interface User {
+  id: string;          // UUID
+  email: string;       // Unique email
+  name?: string;       // Display name
+  image?: string;      // Profile image URL
+  role: 'user' | 'admin';
+  createdAt: string;   // ISO timestamp
+  updatedAt: string;   // ISO timestamp
+}
+```
+
+## Get User Profile
+
+### Current User
+
+```bash
+curl http://localhost:7130/api/auth/sessions/current \
+  -H "Authorization: Bearer TOKEN"
+```
+
+Response:
+```json
+{
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "role": "user",
+    "createdAt": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+### Get User by ID (Admin)
+
+```bash
+curl http://localhost:7130/api/auth/users/USER_ID \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+
+## List All Users (Admin)
+
+```bash
+curl http://localhost:7130/api/auth/users \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+
+Response:
+```json
+{
+  "users": [
+    {
+      "id": "uuid-1",
+      "email": "user1@example.com",
+      "name": "User One",
+      "role": "user",
+      "createdAt": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "uuid-2",
+      "email": "user2@example.com",
+      "name": "User Two",
+      "role": "admin",
+      "createdAt": "2024-01-02T00:00:00Z"
+    }
+  ],
+  "total": 2
+}
+```
+
+## Update User Profile
+
+<Note>
+User profile updates are currently handled through the database API for the user table.
+</Note>
+
+## Admin Operations
+
+### Create Admin User
+
+```bash
+curl -X POST http://localhost:7130/api/auth/users \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "securepass123",
+    "name": "Admin User"
+  }'
+```
+
+### Admin Login
+
+```bash
+curl -X POST http://localhost:7130/api/auth/admin/sessions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "admin@example.com",
+    "password": "securepass123"
+  }'
+```
+
+### Delete Users (Admin)
+
+```bash
+curl -X DELETE http://localhost:7130/api/auth/users \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userIds": ["user-id-1", "user-id-2"]
+  }'
+```
+
+## User Table Access
+
+<Warning>
+The `_user` table is protected by the auth service. You can read it but cannot modify it directly.
+</Warning>
+
+### Read User Data
+
+```bash
+# ✅ Reading is allowed
+curl http://localhost:7130/api/database/records/user \
+  -H "Authorization: Bearer TOKEN"
+
+# ❌ Writing is blocked
+curl -X POST http://localhost:7130/api/database/records/user \
+  -H "Authorization: Bearer TOKEN" \
+  -d '[{"email": "new@example.com"}]'
+# Returns: Error - Cannot modify protected table
+```
+
+### Reference Users in Your Tables
+
+```bash
+# Create table with user reference
+curl -X POST http://localhost:7130/api/database/tables \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "user_profiles",
+    "columns": [
+      {"name": "user_id", "type": "UUID"},
+      {"name": "bio", "type": "STRING"},
+      {"name": "website", "type": "STRING"}
+    ]
+  }'
+
+# Add foreign key
+curl -X PATCH http://localhost:7130/api/database/tables/user_profiles \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "action": "ADD_FOREIGN_KEY",
+    "foreignKey": {
+      "column": "user_id",
+      "referencedTable": "user",
+      "referencedColumn": "id",
+      "onDelete": "CASCADE"
+    }
+  }'
+```
+
+## JavaScript User Management
+
+```javascript
+class UserManager {
+  constructor(token) {
+    this.token = token;
+    this.baseUrl = 'http://localhost:7130';
+  }
+
+  async getCurrentUser() {
+    const response = await fetch(`${this.baseUrl}/api/auth/v2/me`, {
+      headers: { 'Authorization': `Bearer ${this.token}` }
+    });
+    
+    if (!response.ok) throw new Error('Not authenticated');
+    return response.json();
+  }
+
+  async updateProfile(updates) {
+    const response = await fetch(`${this.baseUrl}/api/auth/v2/me`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(updates)
+    });
+    
+    return response.json();
+  }
+
+  // Admin methods
+  async listUsers() {
+    const response = await fetch(`${this.baseUrl}/api/auth/v2/admin/users`, {
+      headers: { 'Authorization': `Bearer ${this.token}` }
+    });
+    
+    if (!response.ok) throw new Error('Admin access required');
+    return response.json();
+  }
+
+  async deleteUsers(userIds) {
+    const response = await fetch(`${this.baseUrl}/api/auth/v2/admin/users`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userIds })
+    });
+    
+    return response.ok;
+  }
+}
+```
+
+## React User Profile
+
+```jsx
+function UserProfile() {
+  const [user, setUser] = useState(null);
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    loadUser();
+  }, []);
+
+  async function loadUser() {
+    const token = localStorage.getItem('access_token');
+    const response = await fetch('http://localhost:7130/api/auth/v2/me', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      setUser(data.user);
+    }
+  }
+
+  async function updateProfile(e) {
+    e.preventDefault();
+    const token = localStorage.getItem('access_token');
+    
+    const response = await fetch('http://localhost:7130/api/auth/v2/me', {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: e.target.name.value,
+        image: e.target.image.value
+      })
+    });
+    
+    if (response.ok) {
+      await loadUser();
+      setEditing(false);
+    }
+  }
+
+  if (!user) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <h2>Profile</h2>
+      {!editing ? (
+        <div>
+          <p>Name: {user.name}</p>
+          <p>Email: {user.email}</p>
+          <p>Role: {user.role}</p>
+          <button onClick={() => setEditing(true)}>Edit</button>
+        </div>
+      ) : (
+        <form onSubmit={updateProfile}>
+          <input name="name" defaultValue={user.name} />
+          <input name="image" defaultValue={user.image} placeholder="Avatar URL" />
+          <button type="submit">Save</button>
+          <button onClick={() => setEditing(false)}>Cancel</button>
+        </form>
+      )}
+    </div>
+  );
+}
+```
+
+## User Roles
+
+### Check User Role
+
+```javascript
+async function checkAdmin() {
+  const token = localStorage.getItem('access_token');
+  const response = await fetch('http://localhost:7130/api/auth/v2/me', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  
+  if (response.ok) {
+    const { user } = await response.json();
+    return user.role === 'admin';
+  }
+  
+  return false;
+}
+
+// Protected component
+function AdminPanel() {
+  const [isAdmin, setIsAdmin] = useState(false);
+  
+  useEffect(() => {
+    checkAdmin().then(setIsAdmin);
+  }, []);
+  
+  if (!isAdmin) {
+    return <div>Access denied. Admin only.</div>;
+  }
+  
+  return <div>Admin panel content</div>;
+}
+```
+
+## Best Practices
+
+1. **Never modify user table directly** - Use Auth API
+2. **Store user_id in localStorage** - For quick access
+3. **Validate roles on backend** - Never trust client
+4. **Use foreign keys** - Maintain data integrity
+5. **Handle token expiry** - Implement refresh logic
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Sessions" href="/auth/sessions">
+    Manage user sessions
+  </Card>
+  <Card title="API Keys" href="/auth/api-keys">
+    Alternative authentication
+  </Card>
+</CardGroup>

@@ -1,0 +1,407 @@
+---
+title: API Keys
+description: Alternative authentication using API keys for server-to-server communication
+---
+
+# API Keys
+
+API keys provide an alternative authentication method for server-to-server communication and development.
+
+## API Key Authentication
+
+### Using API Keys
+
+Include the API key in the `x-api-key` header:
+
+```bash
+curl http://localhost:7130/api/database/records/products \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+### Environment Configuration
+
+Set your API key in the environment:
+
+```bash
+# .env file
+API_KEY=your-secret-api-key-here
+```
+
+## When to Use API Keys
+
+<CardGroup cols={2}>
+  <Card title="Server-to-Server" icon="server">
+    Backend services, cron jobs, webhooks
+  </Card>
+  <Card title="Development" icon="code">
+    Testing, local development, CI/CD
+  </Card>
+  <Card title="Public APIs" icon="globe">
+    Rate-limited public endpoints
+  </Card>
+  <Card title="IoT Devices" icon="microchip">
+    Embedded systems, sensors
+  </Card>
+</CardGroup>
+
+## API Key vs JWT
+
+| Feature | API Key | JWT Token |
+|---------|---------|-----------|
+| **Use Case** | Server-to-server | User authentication |
+| **Expiry** | No expiry | 7 days |
+| **User Context** | No user | Specific user |
+| **Rotation** | Manual | Automatic refresh |
+| **Storage** | Environment vars | Client storage |
+| **Stateless** | Yes | Yes |
+
+## Generate API Keys
+
+```javascript
+// Generate secure API key
+function generateApiKey() {
+  const crypto = require('crypto');
+  return crypto.randomBytes(32).toString('hex');
+}
+
+// Example: insforge_sk_64hexcharacters
+const apiKey = `insforge_sk_${generateApiKey()}`;
+```
+
+## JavaScript Client
+
+```javascript
+class ApiKeyClient {
+  constructor(apiKey, baseUrl = 'http://localhost:7130') {
+    this.apiKey = apiKey;
+    this.baseUrl = baseUrl;
+  }
+
+  async request(path, options = {}) {
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      ...options,
+      headers: {
+        ...options.headers,
+        'x-api-key': this.apiKey,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  // Database operations
+  async getRecords(table, params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/api/database/records/${table}?${query}`);
+  }
+
+  async createRecord(table, data) {
+    return this.request(`/api/database/records/${table}`, {
+      method: 'POST',
+      body: JSON.stringify(Array.isArray(data) ? data : [data])
+    });
+  }
+
+  async updateRecord(table, filter, data) {
+    return this.request(`/api/database/records/${table}?${filter}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data)
+    });
+  }
+
+  async deleteRecord(table, filter) {
+    return this.request(`/api/database/records/${table}?${filter}`, {
+      method: 'DELETE'
+    });
+  }
+}
+
+// Usage
+const client = new ApiKeyClient('your-api-key');
+
+// Get products
+const products = await client.getRecords('products', {
+  'price': 'gte.10',
+  'order': 'name.asc'
+});
+
+// Create product
+await client.createRecord('products', {
+  name: 'Widget',
+  price: 19.99
+});
+```
+
+## Node.js Server Integration
+
+```javascript
+// server.js
+import axios from 'axios';
+
+const insforgeApi = axios.create({
+  baseURL: 'http://localhost:7130',
+  headers: {
+    'x-api-key': process.env.INSFORGE_API_KEY
+  }
+});
+
+// Sync data from external source
+async function syncProducts() {
+  try {
+    // Get external data
+    const externalProducts = await fetchExternalProducts();
+    
+    // Bulk insert to InsForge
+    await insforgeApi.post('/api/database/records/products', 
+      externalProducts.map(p => ({
+        name: p.title,
+        price: p.cost,
+        external_id: p.id
+      }))
+    );
+    
+    console.log('Products synced successfully');
+  } catch (error) {
+    console.error('Sync failed:', error);
+  }
+}
+
+// Run sync every hour
+setInterval(syncProducts, 3600000);
+```
+
+## Python Client
+
+```python
+import requests
+import os
+
+class InsForgeClient:
+    def __init__(self, api_key=None, base_url="http://localhost:7130"):
+        self.api_key = api_key or os.getenv("INSFORGE_API_KEY")
+        self.base_url = base_url
+        self.headers = {
+            "x-api-key": self.api_key,
+            "Content-Type": "application/json"
+        }
+    
+    def get_records(self, table, filters=None):
+        params = filters or {}
+        response = requests.get(
+            f"{self.base_url}/api/database/records/{table}",
+            headers=self.headers,
+            params=params
+        )
+        response.raise_for_status()
+        return response.json()
+    
+    def create_record(self, table, data):
+        # Ensure data is a list
+        if not isinstance(data, list):
+            data = [data]
+        
+        response = requests.post(
+            f"{self.base_url}/api/database/records/{table}",
+            headers=self.headers,
+            json=data
+        )
+        response.raise_for_status()
+        return response.json()
+
+# Usage
+client = InsForgeClient()
+
+# Get all users
+users = client.get_records("user")
+
+# Create a record
+client.create_record("logs", {
+    "action": "sync_started",
+    "timestamp": "2024-01-01T00:00:00Z"
+})
+```
+
+## Rate Limiting
+
+Implement rate limiting for API keys:
+
+```javascript
+// Simple in-memory rate limiter
+class RateLimiter {
+  constructor(maxRequests = 100, windowMs = 60000) {
+    this.maxRequests = maxRequests;
+    this.windowMs = windowMs;
+    this.requests = new Map();
+  }
+
+  check(apiKey) {
+    const now = Date.now();
+    const requests = this.requests.get(apiKey) || [];
+    
+    // Remove old requests outside window
+    const validRequests = requests.filter(
+      time => now - time < this.windowMs
+    );
+    
+    if (validRequests.length >= this.maxRequests) {
+      return false; // Rate limit exceeded
+    }
+    
+    validRequests.push(now);
+    this.requests.set(apiKey, validRequests);
+    return true;
+  }
+}
+
+// Middleware
+const limiter = new RateLimiter(100, 60000); // 100 req/min
+
+async function apiKeyMiddleware(req, res, next) {
+  const apiKey = req.headers['x-api-key'];
+  
+  if (!apiKey) {
+    return res.status(401).json({ error: 'API key required' });
+  }
+  
+  if (!limiter.check(apiKey)) {
+    return res.status(429).json({ error: 'Rate limit exceeded' });
+  }
+  
+  next();
+}
+```
+
+## API Key Management
+
+### Store API Keys Securely
+
+```javascript
+// Store hashed API keys
+const crypto = require('crypto');
+
+function hashApiKey(apiKey) {
+  return crypto
+    .createHash('sha256')
+    .update(apiKey)
+    .digest('hex');
+}
+
+// Store in database
+async function createApiKey(name, permissions) {
+  const apiKey = generateApiKey();
+  const hashedKey = hashApiKey(apiKey);
+  
+  await db.insert('api_keys', {
+    name,
+    key_hash: hashedKey,
+    permissions: JSON.stringify(permissions),
+    created_at: new Date()
+  });
+  
+  // Return the key only once
+  return apiKey;
+}
+
+// Validate API key
+async function validateApiKey(apiKey) {
+  const hashedKey = hashApiKey(apiKey);
+  
+  const result = await db.query(
+    'SELECT * FROM api_keys WHERE key_hash = ?',
+    [hashedKey]
+  );
+  
+  return result.length > 0 ? result[0] : null;
+}
+```
+
+## Security Best Practices
+
+1. **Never expose API keys in frontend code**
+2. **Use environment variables** for storage
+3. **Rotate keys regularly**
+4. **Implement rate limiting**
+5. **Use HTTPS in production**
+6. **Hash keys in database**
+7. **Log API key usage**
+8. **Scope permissions per key**
+
+## Common Use Cases
+
+### Webhook Integration
+
+```javascript
+// Webhook endpoint that uses API key
+app.post('/webhook/payment', async (req, res) => {
+  const client = new ApiKeyClient(process.env.INSFORGE_API_KEY);
+  
+  try {
+    // Process payment webhook
+    const payment = req.body;
+    
+    // Update order in InsForge
+    await client.updateRecord(
+      'orders',
+      `id=eq.${payment.orderId}`,
+      { status: 'paid', paid_at: new Date() }
+    );
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Webhook processing failed:', error);
+    res.status(500).json({ error: 'Processing failed' });
+  }
+});
+```
+
+### Scheduled Tasks
+
+```javascript
+// Cron job using API key
+const cron = require('node-cron');
+
+// Run daily at midnight
+cron.schedule('0 0 * * *', async () => {
+  const client = new ApiKeyClient(process.env.INSFORGE_API_KEY);
+  
+  try {
+    // Clean up old sessions
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    await client.deleteRecord(
+      'sessions',
+      `created_at=lt.${thirtyDaysAgo.toISOString()}`
+    );
+    
+    console.log('Old sessions cleaned');
+  } catch (error) {
+    console.error('Cleanup failed:', error);
+  }
+});
+```
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| "Invalid API key" | Check key is correct and active |
+| "Unauthorized" | Ensure x-api-key header is set |
+| "Rate limit exceeded" | Reduce request frequency |
+| "Permission denied" | Check API key permissions |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication Overview" href="/auth/overview">
+    Back to authentication basics
+  </Card>
+  <Card title="Database API" href="/database/postgrest">
+    Use API keys with database
+  </Card>
+</CardGroup>

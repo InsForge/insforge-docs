@@ -1,0 +1,393 @@
+---
+title: Migrations & RLS
+description: Database migrations, Row Level Security, and advanced PostgreSQL features
+---
+
+# Migrations & Row Level Security
+
+Manage database schema changes and implement fine-grained access control with PostgreSQL Row Level Security (RLS).
+
+## Database Initialization
+
+InsForge automatically initializes your database on first run with:
+- System tables for authentication and storage
+- Required extensions and functions
+- Default configurations
+
+## Row Level Security (RLS)
+
+RLS provides row-level access control, allowing you to define policies that determine which rows users can access.
+
+### Enable RLS on Tables
+
+When creating a table:
+
+```bash
+curl -X POST http://localhost:7130/api/database/tables \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "user_posts",
+    "rlsEnabled": true,
+    "columns": [
+      {"name": "user_id", "type": "UUID"},
+      {"name": "title", "type": "STRING"},
+      {"name": "content", "type": "STRING"},
+      {"name": "is_public", "type": "BOOLEAN", "defaultValue": false}
+    ]
+  }'
+```
+
+### Available RLS Functions
+
+InsForge provides built-in functions for RLS policies:
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `public.uid()` | UUID | Current user's ID from JWT |
+| `public.role()` | TEXT | Current user's role |
+| `public.email()` | TEXT | Current user's email |
+
+### Common RLS Policies
+
+#### Users Can Only Access Their Own Data
+
+```sql
+-- Policy: Users can only see their own posts
+CREATE POLICY "Users can view own posts"
+ON user_posts
+FOR SELECT
+USING (user_id = public.uid());
+
+-- Policy: Users can only insert their own posts
+CREATE POLICY "Users can insert own posts"
+ON user_posts
+FOR INSERT
+WITH CHECK (user_id = public.uid());
+
+-- Policy: Users can only update their own posts
+CREATE POLICY "Users can update own posts"
+ON user_posts
+FOR UPDATE
+USING (user_id = public.uid())
+WITH CHECK (user_id = public.uid());
+
+-- Policy: Users can only delete their own posts
+CREATE POLICY "Users can delete own posts"
+ON user_posts
+FOR DELETE
+USING (user_id = public.uid());
+```
+
+#### Public and Private Data
+
+```sql
+-- Policy: Anyone can see public posts, users see their own private posts
+CREATE POLICY "View public or own posts"
+ON user_posts
+FOR SELECT
+USING (
+  is_public = true 
+  OR user_id = public.uid()
+);
+```
+
+#### Role-Based Access
+
+```sql
+-- Policy: Admins can see everything
+CREATE POLICY "Admins view all"
+ON user_posts
+FOR ALL
+USING (public.role() = 'admin');
+
+-- Policy: Moderators can view and update
+CREATE POLICY "Moderators can moderate"
+ON user_posts
+FOR SELECT, UPDATE
+USING (public.role() IN ('moderator', 'admin'));
+```
+
+## Manual Migration Management
+
+While InsForge handles basic schema operations through the API, you may need direct database access for complex migrations.
+
+### Accessing PostgreSQL
+
+Connect to your PostgreSQL database:
+
+```bash
+# Using psql
+psql "postgresql://user:password@localhost:5432/insforge"
+
+# Using connection string from environment
+psql $DATABASE_URL
+```
+
+### Creating Custom Policies
+
+```sql
+-- Enable RLS on existing table
+ALTER TABLE products ENABLE ROW LEVEL SECURITY;
+
+-- Create policy for vendor access
+CREATE POLICY "Vendors manage own products"
+ON products
+FOR ALL
+USING (vendor_id = public.uid())
+WITH CHECK (vendor_id = public.uid());
+
+-- Create read-only public access
+CREATE POLICY "Public read access"
+ON products
+FOR SELECT
+USING (is_published = true);
+```
+
+### Complex Policy Examples
+
+#### Time-Based Access
+
+```sql
+-- Posts visible only after publish date
+CREATE POLICY "Published posts only"
+ON posts
+FOR SELECT
+USING (
+  published_at <= CURRENT_TIMESTAMP
+  OR user_id = public.uid()
+);
+```
+
+#### Hierarchical Access
+
+```sql
+-- Team members can access team resources
+CREATE POLICY "Team member access"
+ON team_resources
+FOR ALL
+USING (
+  EXISTS (
+    SELECT 1 FROM team_members
+    WHERE team_members.team_id = team_resources.team_id
+    AND team_members.user_id = public.uid()
+  )
+);
+```
+
+#### Quota Enforcement
+
+```sql
+-- Limit number of records per user
+CREATE POLICY "User quota limit"
+ON user_files
+FOR INSERT
+WITH CHECK (
+  (
+    SELECT COUNT(*) 
+    FROM user_files 
+    WHERE user_id = public.uid()
+  ) < 100
+);
+```
+
+## Schema Versioning
+
+Track schema changes using a migrations table:
+
+```sql
+-- Create migrations tracking table
+CREATE TABLE IF NOT EXISTS _migrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  version VARCHAR(255) UNIQUE NOT NULL,
+  description TEXT,
+  executed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Record a migration
+INSERT INTO _migrations (version, description)
+VALUES ('v1.0.0', 'Initial schema setup');
+```
+
+## Database Functions
+
+### Create Custom Functions
+
+```sql
+-- Function to get user's post count
+CREATE OR REPLACE FUNCTION get_user_post_count(user_uuid UUID)
+RETURNS INTEGER AS $$
+BEGIN
+  RETURN (
+    SELECT COUNT(*) 
+    FROM user_posts 
+    WHERE user_id = user_uuid
+  );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to check ownership
+CREATE OR REPLACE FUNCTION is_owner(table_name TEXT, record_id UUID)
+RETURNS BOOLEAN AS $$
+DECLARE
+  owner_id UUID;
+BEGIN
+  EXECUTE format('SELECT user_id FROM %I WHERE id = $1', table_name)
+  INTO owner_id
+  USING record_id;
+  
+  RETURN owner_id = public.uid();
+END;
+$$ LANGUAGE plpgsql;
+```
+
+### Triggers
+
+```sql
+-- Auto-update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Apply trigger to table
+CREATE TRIGGER update_products_updated_at
+BEFORE UPDATE ON products
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at();
+```
+
+## Advanced Features
+
+### Indexes for Performance
+
+```sql
+-- Create index on frequently queried column
+CREATE INDEX idx_products_category 
+ON products(category);
+
+-- Composite index for complex queries
+CREATE INDEX idx_orders_user_date 
+ON orders(user_id, created_at DESC);
+
+-- Partial index for filtered queries
+CREATE INDEX idx_active_products 
+ON products(name) 
+WHERE is_active = true;
+
+-- Full-text search index
+CREATE INDEX idx_products_search 
+ON products 
+USING GIN(to_tsvector('english', name || ' ' || description));
+```
+
+### Constraints
+
+```sql
+-- Unique constraint
+ALTER TABLE products 
+ADD CONSTRAINT unique_sku 
+UNIQUE (sku);
+
+-- Check constraint
+ALTER TABLE products 
+ADD CONSTRAINT positive_price 
+CHECK (price > 0);
+
+-- Composite unique constraint
+ALTER TABLE team_members 
+ADD CONSTRAINT unique_team_member 
+UNIQUE (team_id, user_id);
+```
+
+## Testing RLS Policies
+
+Test your RLS policies using different user contexts:
+
+```sql
+-- Set JWT claims for testing
+SET request.jwt.claims = '{"sub": "user-123", "role": "user"}';
+
+-- Test SELECT policy
+SELECT * FROM user_posts;
+
+-- Test INSERT policy
+INSERT INTO user_posts (user_id, title, content)
+VALUES ('user-123', 'Test', 'Content');
+
+-- Reset context
+RESET request.jwt.claims;
+```
+
+## Troubleshooting RLS
+
+### Common Issues
+
+1. **No Rows Returned**: Check if RLS is enabled and policies exist
+2. **Permission Denied**: Ensure appropriate policies for the operation
+3. **Policy Not Working**: Verify JWT claims are correctly set
+4. **Bypass RLS**: Only database owner can bypass RLS
+
+### Debug RLS Policies
+
+```sql
+-- Check if RLS is enabled
+SELECT tablename, rowsecurity 
+FROM pg_tables 
+WHERE schemaname = 'public';
+
+-- List all policies
+SELECT * FROM pg_policies 
+WHERE tablename = 'your_table';
+
+-- Test policy with EXPLAIN
+EXPLAIN (ANALYZE, BUFFERS) 
+SELECT * FROM user_posts;
+```
+
+## Best Practices
+
+### RLS Design
+
+1. **Start Simple**: Begin with basic policies and add complexity as needed
+2. **Use Functions**: Create reusable functions for common checks
+3. **Test Thoroughly**: Test all CRUD operations with different user roles
+4. **Document Policies**: Keep clear documentation of access rules
+5. **Performance**: Index columns used in RLS policies
+
+### Migration Strategy
+
+1. **Version Control**: Track all schema changes in version control
+2. **Rollback Plan**: Always have a rollback strategy
+3. **Test First**: Test migrations in development before production
+4. **Backup**: Always backup before major schema changes
+5. **Incremental**: Make small, incremental changes
+
+## Security Considerations
+
+<Warning>
+RLS policies are bypassed for database superusers. Ensure your application connects with appropriate limited privileges.
+</Warning>
+
+### Security Checklist
+
+- ✅ Enable RLS on sensitive tables
+- ✅ Create policies for all operations (SELECT, INSERT, UPDATE, DELETE)
+- ✅ Test policies with different user contexts
+- ✅ Use prepared statements to prevent SQL injection
+- ✅ Regularly audit access patterns
+- ✅ Monitor failed access attempts
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" href="/api-reference/tables/create-table">
+    Explore table management APIs
+  </Card>
+  <Card title="PostgREST" href="/database/postgrest">
+    Learn about the REST API
+  </Card>
+</CardGroup>

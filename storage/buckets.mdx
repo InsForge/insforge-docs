@@ -1,0 +1,435 @@
+---
+title: Bucket Management
+description: Create and manage storage buckets with public/private access control
+---
+
+# Bucket Management
+
+Buckets are containers for organizing files. Each bucket can be public (no auth required for downloads) or private (auth required).
+
+## Create Bucket (Admin)
+
+```bash
+curl -X POST http://localhost:7130/api/storage/buckets \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bucketName": "images",
+    "isPublic": true
+  }'
+```
+
+Response:
+```json
+{
+  "name": "images",
+  "isPublic": true,
+  "createdAt": "2024-01-01T00:00:00Z"
+}
+```
+
+## List Buckets (Admin)
+
+```bash
+curl http://localhost:7130/api/storage/buckets \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+
+Response:
+```json
+{
+  "buckets": [
+    {
+      "name": "uploads",
+      "isPublic": false,
+      "objectCount": 42,
+      "totalSize": 10485760
+    },
+    {
+      "name": "images",
+      "isPublic": true,
+      "objectCount": 156,
+      "totalSize": 52428800
+    }
+  ]
+}
+```
+
+## Update Bucket Visibility (Admin)
+
+```bash
+# Make bucket public
+curl -X PATCH http://localhost:7130/api/storage/buckets/uploads \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "isPublic": true
+  }'
+
+# Make bucket private
+curl -X PATCH http://localhost:7130/api/storage/buckets/images \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "isPublic": false
+  }'
+```
+
+## Delete Bucket (Admin)
+
+<Warning>
+Deleting a bucket removes all files permanently. This cannot be undone.
+</Warning>
+
+```bash
+curl -X DELETE http://localhost:7130/api/storage/buckets/temp \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+
+## Bucket Naming Rules
+
+- Lowercase letters, numbers, hyphens only
+- Must start with letter or number
+- 3-63 characters long
+- No consecutive hyphens
+- Not formatted as IP address
+
+Valid examples:
+- `uploads`
+- `user-avatars`
+- `public-files-2024`
+
+Invalid examples:
+- `Uploads` (uppercase)
+- `user_avatars` (underscore)
+- `ab` (too short)
+- `192.168.1.1` (IP format)
+
+## JavaScript Bucket Manager
+
+```javascript
+class BucketManager {
+  constructor(adminToken) {
+    this.token = adminToken;
+    this.baseUrl = 'http://localhost:7130';
+  }
+  
+  async createBucket(name, isPublic = false) {
+    const response = await fetch(`${this.baseUrl}/api/storage/buckets`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        bucketName: name,
+        isPublic
+      })
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message);
+    }
+    
+    return response.json();
+  }
+  
+  async listBuckets() {
+    const response = await fetch(`${this.baseUrl}/api/storage/buckets`, {
+      headers: {
+        'Authorization': `Bearer ${this.token}`
+      }
+    });
+    
+    return response.json();
+  }
+  
+  async updateBucketVisibility(name, isPublic) {
+    const response = await fetch(
+      `${this.baseUrl}/api/storage/buckets/${name}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ isPublic })
+      }
+    );
+    
+    return response.ok;
+  }
+  
+  async deleteBucket(name) {
+    const confirmed = confirm(
+      `Delete bucket "${name}" and all its files? This cannot be undone.`
+    );
+    
+    if (!confirmed) return false;
+    
+    const response = await fetch(
+      `${this.baseUrl}/api/storage/buckets/${name}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${this.token}`
+        }
+      }
+    );
+    
+    return response.ok;
+  }
+}
+
+// Usage
+const buckets = new BucketManager(adminToken);
+
+// Create public bucket for images
+await buckets.createBucket('product-images', true);
+
+// Create private bucket for documents
+await buckets.createBucket('user-documents', false);
+
+// List all buckets
+const { buckets: list } = await buckets.listBuckets();
+console.log(list);
+
+// Make bucket public
+await buckets.updateBucketVisibility('user-documents', true);
+```
+
+## React Admin Panel
+
+```jsx
+function BucketAdmin() {
+  const [buckets, setBuckets] = useState([]);
+  const [creating, setCreating] = useState(false);
+  
+  useEffect(() => {
+    loadBuckets();
+  }, []);
+  
+  async function loadBuckets() {
+    const token = localStorage.getItem('admin_token');
+    const response = await fetch('http://localhost:7130/api/storage/buckets', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      setBuckets(data.buckets);
+    }
+  }
+  
+  async function createBucket(e) {
+    e.preventDefault();
+    const token = localStorage.getItem('admin_token');
+    
+    const response = await fetch('http://localhost:7130/api/storage/buckets', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        bucketName: e.target.name.value,
+        isPublic: e.target.isPublic.checked
+      })
+    });
+    
+    if (response.ok) {
+      await loadBuckets();
+      setCreating(false);
+      e.target.reset();
+    } else {
+      const error = await response.json();
+      alert(error.message);
+    }
+  }
+  
+  async function toggleVisibility(bucketName, currentState) {
+    const token = localStorage.getItem('admin_token');
+    
+    await fetch(`http://localhost:7130/api/storage/buckets/${bucketName}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ isPublic: !currentState })
+    });
+    
+    loadBuckets();
+  }
+  
+  return (
+    <div>
+      <h2>Storage Buckets</h2>
+      
+      <button onClick={() => setCreating(true)}>Create Bucket</button>
+      
+      {creating && (
+        <form onSubmit={createBucket}>
+          <input 
+            name="name" 
+            pattern="[a-z0-9][a-z0-9-]{1,61}[a-z0-9]"
+            placeholder="bucket-name" 
+            required 
+          />
+          <label>
+            <input type="checkbox" name="isPublic" />
+            Public Access
+          </label>
+          <button type="submit">Create</button>
+          <button onClick={() => setCreating(false)}>Cancel</button>
+        </form>
+      )}
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Access</th>
+            <th>Files</th>
+            <th>Size</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {buckets.map(bucket => (
+            <tr key={bucket.name}>
+              <td>{bucket.name}</td>
+              <td>
+                <button onClick={() => toggleVisibility(bucket.name, bucket.isPublic)}>
+                  {bucket.isPublic ? '🌍 Public' : '🔒 Private'}
+                </button>
+              </td>
+              <td>{bucket.objectCount}</td>
+              <td>{(bucket.totalSize / 1024 / 1024).toFixed(2)} MB</td>
+              <td>
+                <button onClick={() => deleteBucket(bucket.name)}>Delete</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+```
+
+## Common Bucket Patterns
+
+### User-Specific Buckets
+
+```javascript
+// Create bucket for each user
+async function createUserBucket(userId) {
+  const bucketName = `user-${userId.substring(0, 8)}`;
+  
+  await buckets.createBucket(bucketName, false);
+  
+  // Store bucket info in database
+  await fetch('/api/database/records/user_storage', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify([{
+      user_id: userId,
+      bucket_name: bucketName,
+      storage_limit: 104857600 // 100MB
+    }])
+  });
+}
+```
+
+### Bucket Categories
+
+```javascript
+const BUCKET_CATEGORIES = {
+  avatars: { isPublic: true, maxSize: 5 * 1024 * 1024 },
+  documents: { isPublic: false, maxSize: 50 * 1024 * 1024 },
+  thumbnails: { isPublic: true, maxSize: 1 * 1024 * 1024 },
+  backups: { isPublic: false, maxSize: 500 * 1024 * 1024 }
+};
+
+async function setupBuckets() {
+  for (const [name, config] of Object.entries(BUCKET_CATEGORIES)) {
+    await buckets.createBucket(name, config.isPublic);
+  }
+}
+```
+
+## Access Control Patterns
+
+### Public CDN Bucket
+
+```javascript
+// Setup public bucket for CDN-like access
+await buckets.createBucket('cdn', true);
+
+// Upload static assets
+async function uploadStaticAsset(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await fetch(
+    'http://localhost:7130/api/storage/buckets/cdn/objects',
+    {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    }
+  );
+  
+  const data = await response.json();
+  
+  // Public URL - no auth needed
+  return `http://localhost:7130${data.url}`;
+}
+```
+
+### Private User Files
+
+```javascript
+// Private bucket for sensitive files
+await buckets.createBucket('private-docs', false);
+
+// Download requires authentication
+async function downloadPrivateFile(fileKey) {
+  const response = await fetch(
+    `http://localhost:7130/api/storage/buckets/private-docs/objects/${fileKey}`,
+    {
+      headers: { 'Authorization': `Bearer ${token}` }
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error('Access denied');
+  }
+  
+  return response.blob();
+}
+```
+
+## Best Practices
+
+1. **Naming Convention**: Use descriptive, consistent names
+2. **Access Control**: Start private, make public if needed
+3. **Organization**: Group related files in same bucket
+4. **Cleanup**: Delete unused buckets to save space
+5. **Monitoring**: Track bucket size and file counts
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="File Uploads" href="/storage/file-uploads">
+    Upload and manage files
+  </Card>
+  <Card title="CDN Setup" href="/storage/cdn">
+    Configure CDN delivery
+  </Card>
+</CardGroup>

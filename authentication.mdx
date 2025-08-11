@@ -1,0 +1,125 @@
+---
+title: Authentication
+description: Built-in user management and JWT-based authentication
+---
+
+# Authentication
+
+InsForge includes complete authentication. No setup required.
+
+## How It Works
+
+Users → Sessions → Protected APIs
+
+1. User registers or logs in
+2. Receives JWT access token (valid 7 days)
+3. Includes token in API requests
+4. Backend validates and identifies user
+
+## Core Endpoints
+
+```javascript
+// Register
+POST /api/auth/users
+{ email, password, name }
+
+// Login  
+POST /api/auth/sessions
+{ email, password }
+
+// Get current user
+GET /api/auth/sessions/current
+Authorization: Bearer TOKEN
+
+// Response structure
+{
+  accessToken: "...",
+  user: { id: "...", email: "...", name: "..." }
+}
+```
+
+## The User Table
+
+The `_user` table is special:
+- **Read** via database API: ✅
+- **Modify** via database API: ❌
+- **Modify** via auth endpoints: ✅
+
+This ensures security policies are enforced.
+
+## Session Management
+
+```javascript
+// After login
+localStorage.setItem('access_token', accessToken);
+localStorage.setItem('user_id', user.id);
+
+// For API calls
+fetch('/api/database/records/posts', {
+  headers: {
+    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+  }
+});
+```
+
+## OAuth Providers
+
+Set environment variables to enable social login:
+
+```env
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_REDIRECT_URI=your-redirect-uri
+
+GITHUB_CLIENT_ID=your-client-id
+GITHUB_CLIENT_SECRET=your-client-secret
+GITHUB_REDIRECT_URI=your-redirect-uri
+```
+
+Then use:
+- `/api/auth/oauth/google` - Get Google auth URL
+- `/api/auth/oauth/github` - Get GitHub auth URL
+- `/api/auth/oauth/:provider/callback` - OAuth callback handler
+
+## Key Concepts
+
+**JWT Tokens** - Access tokens are JWTs with user information encoded.
+
+**Current User Response** - `/api/auth/sessions/current` returns `{user: {...}}` - note the nested structure.
+
+**Protected by Default** - All database operations require authentication.
+
+**Automatic Security** - Password hashing, CSRF protection, rate limiting built-in.
+
+## Common Patterns
+
+```javascript
+// Simple auth hook
+function useAuth() {
+  const [user, setUser] = useState(null);
+  
+  const login = async (email, password) => {
+    const res = await fetch('/api/auth/sessions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const { accessToken, user } = await res.json();
+    localStorage.setItem('access_token', accessToken);
+    localStorage.setItem('user_id', user.id);
+    setUser(user);
+  };
+  
+  const logout = () => {
+    localStorage.clear();
+    setUser(null);
+  };
+  
+  return { user, login, logout };
+}
+```
+
+## Next Steps
+
+- [MCP Integration](/authentication/mcp) - How AI assistants handle auth

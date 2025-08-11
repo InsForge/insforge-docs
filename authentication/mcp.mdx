@@ -1,0 +1,65 @@
+---
+title: Authentication MCP Tools
+description: How AI assistants implement authentication
+---
+
+# Authentication MCP Tools
+
+AI assistants implement complete auth flows using MCP tools.
+
+## Available Tools
+
+| Tool | Purpose |
+|------|---------|
+| `get-auth-api` | Authentication endpoints documentation |
+| `get-instructions` | Backend rules including auth patterns |
+| `debug-backend` | Troubleshoot auth failures |
+| `get-backend-metadata` | See existing users and sessions |
+
+## How AI Implements Auth
+
+When you say "add user login", the AI:
+
+1. Calls `get-auth-api` for endpoint details
+2. Creates login/register forms
+3. Implements token storage
+4. Adds authorization headers to API calls
+5. Handles errors gracefully
+
+## AI Understanding
+
+The AI knows:
+- `_user` table is read-only via database API
+- Modifications go through `/api/auth/*`
+- JWT access tokens go in Authorization headers
+- Response from `/api/auth/sessions/current` is nested: `{user: {...}}`
+- Tokens expire after 7 days
+
+## Common Flows
+
+### User Registration
+```
+You: "Add user registration"
+AI: [Gets auth endpoints]
+AI: [Creates form with email, password, name]
+AI: [POSTs to /api/auth/users]
+AI: [Stores session token]
+```
+
+### Protected Routes
+```
+You: "Make the dashboard require login"
+AI: [Checks for session token]
+AI: [Redirects to login if missing]
+AI: [Includes token in API calls]
+```
+
+### User Profiles
+```
+You: "Show user profile"
+AI: [Calls /api/auth/sessions/current]
+AI: [Extracts nested user object]
+AI: [Displays user information]
+```
+
+The AI handles the complexity. You just describe the feature.

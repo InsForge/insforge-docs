@@ -1,0 +1,85 @@
+---
+title: Storage
+description: How InsForge handles files and uploads
+---
+
+# Storage
+
+File storage seems simple until you build it. Where do files live? How do you prevent overwrites? What about access control? InsForge handles these complexities with a bucket-based storage system inspired by S3.
+
+## The Bucket Concept
+
+Buckets are containers for files, but they're more than folders. Each bucket has an access policy - public or private - that determines who can download files.
+
+This design came from a simple observation: most apps have public assets (profile pictures, product images) and private documents (invoices, reports). Rather than configuring access per file, you organize files into buckets with the right policy.
+
+Only admins create buckets. This prevents chaos - imagine if every user could create buckets named "uploads" or "images". Once created, any authenticated user can upload to buckets.
+
+## MCP Integration
+
+AI assistants manage file storage through InsForge's MCP tools:
+
+### Storage Tools
+
+| Tool | Purpose | Usage |
+|------|---------|-------|
+| `create-bucket` | Create storage buckets | Set up containers with public/private access |
+| `list-buckets` | View all buckets | Check available storage locations |
+| `delete-bucket` | Remove buckets | Clean up unused storage containers |
+| `get-storage-api` | Storage documentation | Upload/download endpoint reference |
+
+### How AI Handles Storage
+
+When you ask your AI to add file uploads:
+
+1. **Checks buckets**: Calls `list-buckets` to see what exists
+2. **Creates if needed**: Uses `create-bucket` with appropriate access
+3. **Implements upload**: Uses storage API endpoints from `get-storage-api`
+4. **Stores URLs**: Saves file URLs in database tables
+
+Example:
+```
+You: "Add profile picture uploads"
+AI: [Calls create-bucket for 'avatars' with public access]
+AI: [Implements upload form with /api/storage/buckets/avatars/objects]
+AI: [Updates user profile with avatar URL]
+AI: "Added avatar upload with preview and storage!"
+```
+
+The AI knows:
+- Public buckets for images, private for documents
+- Automatic file naming prevents overwrites
+- FormData required for file uploads
+- How to handle upload errors gracefully
+
+## Automatic File Naming
+
+The biggest problem with file uploads? Overwrites. When two users upload "resume.pdf", whose file wins?
+
+InsForge solves this by generating unique names automatically. Your "resume.pdf" becomes "resume-1704067200-xyz789.pdf". The timestamp and random suffix guarantee uniqueness while preserving the original name for clarity.
+
+This happens transparently. Users still see "resume.pdf" in your UI, but the storage system prevents conflicts.
+
+## URL Consistency
+
+Every file gets a predictable URL following the pattern `/api/storage/buckets/{bucket}/objects/{filename}`. This consistency means your AI assistant can construct URLs without querying the database.
+
+Public bucket URLs work without authentication - perfect for images in HTML. Private bucket URLs require a valid token - essential for sensitive documents. The same URL structure handles both cases.
+
+## Local vs S3 Storage
+
+InsForge supports two storage backends. Local storage saves files to disk, perfect for development and small deployments. S3 storage connects to AWS or compatible services, providing unlimited scale and professional infrastructure.
+
+The beautiful part? Your application doesn't care. The same API works regardless of backend. Start with local storage, switch to S3 when you need it. No code changes required.
+
+## Why Not Use a CDN Directly?
+
+CDNs are great for serving files, but terrible for uploads. They require signed URLs, complex policies, and careful configuration. One mistake exposes your entire bucket or breaks uploads entirely.
+
+InsForge sits between your app and storage, providing a simple upload API while maintaining security. When you need CDN performance, put CloudFlare in front of InsForge. You get simplicity AND performance.
+
+## Next Steps
+
+- [Working with Buckets](/storage/buckets)
+- [Upload Patterns](/storage/file-uploads)
+- [CDN Integration](/storage/cdn)

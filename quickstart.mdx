@@ -1,80 +1,164 @@
 ---
 title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+description: "Get Insforge running in 5 minutes"
 ---
+
+## Prerequisites
+
+Before you begin, make sure you have:
+- Docker installed on your machine
+- Node.js (for AI agent integrations)
+- An AI coding assistant (Cursor, Claude, or similar)
 
 ## Get started in three steps
 
-Get your documentation site running locally and make your first customization.
+### Step 1: Run Insforge locally
 
-### Step 1: Set up your local environment
+```bash
+# Clone the repository
+git clone https://github.com/insforge/insforge.git
+cd insforge
+
+# Set up environment
+cp .env.example .env
+
+# Start the backend
+docker compose up
+```
+
+Your backend is now running:
+- **API**: http://localhost:7130
+- **Dashboard**: http://localhost:7131
+
+<Note>
+  The first run will take a few minutes to download images and initialize the database.
+</Note>
+
+### Step 2: Connect your AI agent
+
+<Card title="Go to Dashboard" icon="desktop" href="http://localhost:7131">
+  **The dashboard provides one-click setup for all AI tools:**
+  - Tab for each tool (Cursor, Claude Code, Windsurf, Cline, Roo Code)
+  - "Add to [Tool]" button for instant setup
+  - Copy-paste commands with your API key included
+  - MCP JSON tab for manual configuration
+  
+  **Visit http://localhost:7131 →**
+</Card>
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+  <Accordion icon="sparkles" title="Quick Setup Guide">
+    1. **Open the dashboard** at http://localhost:7131
+    2. **Select your AI tool** from the tabs
+    3. **Click "Add to [Tool]"** button or copy the command
+    4. **Test connection** with: "InsForge is my backend, what tables do I have?"
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+    The dashboard provides the exact command with your API key:
+    ```bash
+    npx @insforge/install --client cursor \
+      --env API_KEY=your-actual-key-here \
+      --env API_BASE_URL=http://localhost:7130
+    ```
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+<Note>
+  **Need detailed instructions?** See the [AI Tools Setup](/ai-tools) guide for manual configuration and troubleshooting.
+</Note>
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+### Step 3: Build your first app
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+Create a new directory for your app (not inside the insforge folder):
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+```bash
+mkdir my-app
+cd my-app
+```
 
-### Step 3: Go live
+Now tell your AI assistant to build something:
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+```
+"Build a todo app with user authentication using Insforge as the backend"
+```
+
+Your AI will automatically:
+- Create database tables
+- Set up authentication
+- Handle file uploads
+- Generate a complete frontend
+
+## What you get
+
+With Insforge running, your AI assistant has access to:
+
+<CardGroup cols={2}>
+  <Card title="Database" icon="database">
+    PostgreSQL with instant REST APIs via PostgREST
+  </Card>
+  
+  <Card title="Authentication" icon="shield">
+    Complete auth system with JWT sessions
+  </Card>
+  
+  <Card title="File Storage" icon="folder">
+    S3-compatible storage for uploads
+  </Card>
+  
+  <Card title="Consistent APIs" icon="code">
+    Every endpoint follows the same patterns
+  </Card>
+</CardGroup>
+
+## Try these examples
+
+- `"Create a user registration and login system"`
+- `"Build an Instagram clone with image uploads"`
+- `"Add a comments system with voting"`
+
+## API documentation
+
+For complete API documentation, see the [API Reference](/api-reference/introduction).
+
+<Tip>
+  All database tables you create automatically get REST endpoints through PostgREST.
+</Tip>
 
 ## Next steps
 
-Now that you have your docs running, explore these key features:
-
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Database Guide" icon="database" href="/database/overview">
+    Learn about tables, queries, and migrations
+  </Card>
+  
+  <Card title="Authentication" icon="shield" href="/auth/overview">
+    Set up OAuth, sessions, and user management
+  </Card>
+  
+  <Card title="Storage" icon="folder" href="/storage/overview">
+    Upload and serve files efficiently
+  </Card>
+  
+  <Card title="API Reference" icon="book" href="/api-reference/introduction">
+    Explore all available endpoints
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion icon="circle-exclamation" title="Port already in use">
+    If port 7130 or 7131 is already in use, update the ports in your `.env` file:
+    ```
+    API_PORT=8130
+    DASHBOARD_PORT=8131
+    ```
+  </Accordion>
+  
+  <Accordion icon="circle-exclamation" title="Docker not starting">
+    Make sure Docker Desktop is running and you have sufficient disk space.
+  </Accordion>
+  
+  <Accordion icon="circle-exclamation" title="AI agent not connecting">
+    Verify Insforge is running by visiting http://localhost:7130/health
+  </Accordion>
+</AccordionGroup>

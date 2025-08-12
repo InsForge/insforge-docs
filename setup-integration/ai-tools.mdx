@@ -1,0 +1,192 @@
+---
+title: AI Tools Setup
+description: Connect AI assistants to InsForge
+---
+
+# AI Tools Setup
+
+Connect your favorite AI coding assistant to InsForge with MCP.
+
+## Quick Setup via Dashboard
+
+<Card title="Use the Dashboard (Recommended)" icon="desktop" href="http://localhost:7131">
+  **The easiest way to connect your AI tool:**
+  1. Visit http://localhost:7131
+  2. Select your tool from the tabs
+  3. Click "Add to [Tool]" or copy the command
+  
+  The dashboard provides the exact setup command with your API key included.
+</Card>
+
+## Manual Setup
+
+## Claude Code
+
+```bash
+# One command setup
+claude mcp add insforge
+
+# Enter your API key when prompted
+```
+
+That's it! Claude Code now understands your backend.
+
+## Cursor
+
+1. Open Settings → Features → Model Context Protocol
+2. Add configuration:
+
+```json
+{
+  "mcpServers": {
+    "insforge": {
+      "command": "npx",
+      "args": ["@insforge/mcp-server"],
+      "env": {
+        "API_KEY": "YOUR_API_KEY",
+        "API_BASE_URL": "http://localhost:7130"
+      }
+    }
+  }
+}
+```
+
+3. Restart Cursor
+
+## Windsurf
+
+1. Open Settings → MCP Servers
+2. Add InsForge:
+
+```json
+{
+  "insforge": {
+    "command": "npx",
+    "args": ["@insforge/mcp-server"],
+    "env": {
+      "API_KEY": "YOUR_API_KEY",
+      "API_BASE_URL": "http://localhost:7130"
+    }
+  }
+}
+```
+
+3. Reload window
+
+## Claude Desktop
+
+Edit config at:
+- Mac: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "insforge": {
+      "command": "npx",
+      "args": ["@insforge/mcp-server"],
+      "env": {
+        "API_KEY": "YOUR_API_KEY",
+        "API_BASE_URL": "http://localhost:7130"
+      }
+    }
+  }
+}
+```
+
+## Getting Your API Key
+
+```bash
+# Default admin credentials
+curl -X POST http://localhost:7130/api/auth/admin/sessions \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"change-this-password"}'
+
+# Response includes api_key
+```
+
+Or find in `.env` file after first run.
+
+## What AI Can Do
+
+Once connected, your AI assistant can:
+
+### Database Operations
+- Create tables from descriptions
+- Query and modify data
+- Design relationships
+- Optimize performance
+
+### Authentication
+- Implement login/register
+- Add OAuth providers
+- Manage sessions
+- Protect routes
+
+### Storage
+- Create storage buckets
+- Implement file uploads
+- Handle images and documents
+- Generate CDN URLs
+
+### Example Commands
+
+```
+"Create a blog with posts and comments"
+"Add user authentication with Google login"
+"Implement profile picture uploads"
+"Show me all users who signed up this week"
+"Add a products table for my e-commerce site"
+```
+
+## How It Works
+
+1. **AI receives your request**
+2. **Calls MCP tools** to understand backend
+3. **Executes operations** (create tables, implement auth)
+4. **Writes frontend code** to use the APIs
+5. **Tests everything** automatically
+
+No backend coding required. The AI handles it all.
+
+## Troubleshooting
+
+**"MCP server not found"**
+- Install globally: `npm install -g @insforge/mcp-server`
+
+**"Invalid API key"**
+- Check key in `.env` file
+- Ensure backend is running
+
+**"Connection refused"**
+- Start InsForge: `docker compose up`
+- Check port 7130 is accessible
+
+**"Tool not available"**
+- Update MCP server: `npm update @insforge/mcp-server`
+
+## Best Practices
+
+1. **Always describe the outcome**, not the implementation
+2. **Let AI handle the technical details**
+3. **Review generated code** before production
+4. **Use version control** for all changes
+
+## Advanced Usage
+
+### Custom API URL
+
+If you're hosting InsForge on a different server or port:
+
+```json
+{
+  "insforge": {
+    "command": "npx",
+    "args": ["@insforge/mcp-server"],
+    "env": {
+      "API_KEY": "YOUR_API_KEY",
+      "API_BASE_URL": "https://api.yourdomain.com"
+    }
+  }
+}
+```

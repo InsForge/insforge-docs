@@ -1,0 +1,64 @@
+---
+title: MCP Tools
+description: How AI assistants manage file storage
+---
+
+AI assistants handle file uploads and storage through MCP tools.
+
+## Available Tools
+
+| Tool | Purpose |
+|------|---------|
+| `create-bucket` | Create storage containers |
+| `list-buckets` | View existing buckets |
+| `delete-bucket` | Remove buckets |
+| `get-storage-api` | Storage endpoints documentation |
+
+## How AI Handles Storage
+
+When you say "add profile pictures", the AI:
+
+1. Calls `list-buckets` to check existing
+2. Creates bucket if needed with `create-bucket`
+3. Sets appropriate access (public for images)
+4. Implements upload form with FormData
+5. Stores URLs in database
+
+## AI Understanding
+
+The AI knows:
+- Public buckets for images, private for documents
+- FormData required for file uploads
+- Automatic file renaming prevents overwrites
+- URLs follow predictable pattern
+- How to handle upload errors
+
+## Common Flows
+
+### Profile Pictures
+```
+You: "Add avatar uploads"
+AI: [Creates 'avatars' bucket with public access]
+AI: [Implements file input with preview]
+AI: [Uploads to /api/storage/buckets/avatars/objects]
+AI: [Saves URL to user profile]
+```
+
+### Document Management
+```
+You: "Users should upload resumes"
+AI: [Creates 'documents' bucket with private access]
+AI: [Adds file type validation]
+AI: [Implements secure download with auth]
+```
+
+### Gallery System
+```
+You: "Create photo gallery"
+AI: [Creates 'gallery' bucket]
+AI: [Implements multi-file upload]
+AI: [Stores URLs in photos table]
+AI: [Creates grid display]
+```
+
+The AI handles bucket creation, access policies, and upload flows automatically.

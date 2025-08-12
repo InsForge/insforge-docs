@@ -1,0 +1,178 @@
+---
+title: Deployment
+description: Running InsForge locally or in production
+---
+
+# Deployment
+
+InsForge combines powerful open source tools into a cohesive backend platform.
+
+## Architecture
+
+InsForge orchestrates these services:
+- **PostgreSQL** - Primary database
+- **PostgREST** - Instant REST APIs
+- **Auth Service** - JWT-based authentication (Node.js)
+- **Deno** - Edge functions runtime
+- **Logflare** - Analytics and logging
+- **Vector** - Log aggregation
+
+All managed through Docker Compose.
+
+## Quick Start
+
+```bash
+# Clone repository
+git clone https://github.com/insforge/insforge
+cd insforge
+
+# Copy environment variables
+cp .env.example .env
+
+# Start all services
+docker compose up
+```
+
+Services:
+- Backend API: `http://localhost:7130`
+- PostgREST: `http://localhost:5430`
+- PostgreSQL: `localhost:5432`
+
+## Environment Setup
+
+Essential variables in `.env`:
+
+```env
+# Core Configuration
+PORT=7130
+JWT_SECRET=your-secret-key-here-must-be-32-char-or-above
+
+# Admin Account (for first login)
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=change-this-password
+
+# PostgreSQL (optional - defaults work)
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=insforge
+
+# OAuth (optional)
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+
+# S3 Storage (optional - uses local by default)
+AWS_S3_BUCKET=
+AWS_REGION=us-east-2
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+```
+
+## Production Deployment
+
+### Prerequisites
+
+- Docker & Docker Compose installed
+- A `.env` file with your configuration
+
+That's it! InsForge handles everything else.
+
+### Basic Setup
+
+1. **Set your environment variables**
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit with your values (especially JWT_SECRET)
+nano .env
+```
+
+2. **Start InsForge**
+```bash
+docker compose up -d
+```
+
+3. **Verify it's running**
+```bash
+curl http://localhost:7130/api/health
+```
+
+### Accessing from Outside
+
+If you need external access:
+- **Local network**: Use your machine's IP address instead of localhost
+- **Internet**: Set up port forwarding or use a tunneling service like ngrok
+- **Production**: Deploy to any Docker-compatible hosting (Railway, Render, etc.)
+
+### Cloud Hosting Options
+
+**Simple Hosting (Railway, Render, Fly.io)**
+1. Connect your GitHub repo
+2. Set environment variables from `.env`
+3. Deploy (they handle Docker automatically)
+
+**VPS/Server (DigitalOcean, Linode, AWS EC2)**
+1. Install Docker
+2. Clone repo and configure `.env`
+3. Run `docker compose up -d`
+
+## Database Options
+
+- **Included**: PostgreSQL container
+- **Managed**: Supabase, Neon, Railway PostgreSQL
+- **Cloud**: AWS RDS, Google Cloud SQL, Azure Database
+
+Just update `POSTGRES_*` variables to connect.
+
+## Storage Configuration
+
+**Local Storage** (default)
+- Files saved to disk
+- Good for development
+
+**S3 Storage** (production)
+```env
+AWS_S3_BUCKET=your-bucket
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=your-key
+AWS_SECRET_ACCESS_KEY=your-secret
+```
+
+## Monitoring
+
+Built-in logging with Logflare:
+- API requests
+- Authentication events
+- Database queries
+- Error tracking
+
+Access at `/api/logs` (admin only).
+
+## Scaling
+
+1. **Database**: Use managed PostgreSQL
+2. **Storage**: Switch to S3
+3. **API**: Run multiple InsForge containers
+4. **Cache**: Add Redis (future)
+
+## Troubleshooting
+
+```bash
+# Check all services
+docker compose ps
+
+# View logs
+docker compose logs -f insforge
+
+# Restart services
+docker compose restart
+
+# Reset everything
+docker compose down -v
+docker compose up
+```
+
+Common issues:
+- **Port conflicts**: Change ports in `.env`
+- **Database connection**: Check PostgreSQL is running
+- **JWT errors**: Ensure JWT_SECRET is 32+ characters

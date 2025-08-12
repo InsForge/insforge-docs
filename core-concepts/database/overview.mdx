@@ -1,0 +1,110 @@
+---
+title: Database Overview
+description: Instant REST APIs for your PostgreSQL tables
+---
+
+InsForge turns database tables into REST APIs instantly. No backend code required.
+
+## How It Works
+
+Create a table → Get an API. That's it.
+
+When you create a `products` table, you immediately get:
+- `GET /api/database/records/products` - List products
+- `POST /api/database/records/products` - Create products  
+- `PATCH /api/database/records/products?id=eq.123` - Update product
+- `DELETE /api/database/records/products?id=eq.123` - Delete product
+
+This magic happens through PostgREST, which sits between your app and PostgreSQL.
+
+## Tables Are APIs
+
+Traditional backends require you to write code for every operation. InsForge eliminates this entirely. The table IS the API.
+
+```javascript
+// Create a product (note: array syntax required!)
+fetch('/api/database/records/products', {
+  method: 'POST',
+  headers: { 
+    'Authorization': 'Bearer TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify([{ name: 'Widget', price: 19.99 }])
+})
+```
+
+## Data Types
+
+Keep it simple. Seven types cover everything:
+
+- `STRING` - Text of any length
+- `INTEGER` - Whole numbers
+- `FLOAT` - Decimal numbers
+- `BOOLEAN` - True/false
+- `UUID` - Unique identifiers
+- `DATETIME` - Timestamps with timezone
+- `JSON` - Structured data
+
+## Querying
+
+PostgREST provides powerful filtering without SQL:
+
+```javascript
+// Price greater than 20
+'/api/database/records/products?price=gt.20'
+
+// Name contains "Widget"
+'/api/database/records/products?name=like.*Widget*'
+
+// Multiple conditions
+'/api/database/records/products?price=gte.10&in_stock=eq.true'
+
+// Sorting
+'/api/database/records/products?order=price.desc'
+
+// Pagination
+headers: { 'Range': '0-9' }  // First 10 items
+```
+
+## System Tables
+
+Tables prefixed with `_` are system-managed:
+
+- `_user` - User accounts (read-only via database API)
+- `_account` - OAuth provider accounts linked to users
+- `_storage` - File metadata (system only)
+- `_storage_buckets` - Storage bucket configuration
+- `_config` - System configuration
+- `_metadata` - System metadata
+
+<Note>
+To modify users, use auth endpoints like `/api/auth/*`. The database API can only read users.
+</Note>
+
+## Relationships
+
+Foreign keys work automatically. Reference the `_user` table to link data to users:
+
+```sql
+CREATE TABLE posts (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES _user(id),
+  content TEXT
+);
+```
+
+PostgREST handles the joins - no backend code needed.
+
+## Key Concepts
+
+**No Migrations** - This is Backend-as-a-Service. The platform manages the database.
+
+**Array Syntax** - POST requests must send arrays: `[{...}]` even for single records.
+
+**Prefer Header** - Add `Prefer: return=representation` to see created/updated data.
+
+**Idempotent Deletes** - DELETE succeeds even if the record doesn't exist.
+
+## Next Steps
+
+- [MCP Integration](/core-concepts/database/mcp) - How AI assistants work with your database

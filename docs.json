@@ -20,6 +20,7 @@
     "prompt": "Search Insforge docs..."
   },
   "favicon": "/favicon.svg",
+  "index": "getting-started/introduction",
   "navigation": {
     "tabs": [
       {
@@ -154,7 +155,7 @@
       "anchors": [
         {
           "anchor": "Community",
-          "href": "https://discord.gg/insforge",
+          "href": "https://discord.gg/DPVfYUtdQc",
           "icon": "discord"
         },
         {

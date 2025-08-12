@@ -10,6 +10,15 @@
   "appearance": {
     "default": "dark"
   },
+  "seo": {
+    "metatags": {
+      "og:site_name": "Insforge Documentation"
+    },
+    "indexing": "navigable"
+  },
+  "search": {
+    "prompt": "Search Insforge docs..."
+  },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
@@ -18,7 +27,7 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["introduction", "quickstart"]
+            "pages": ["getting-started/introduction", "getting-started/quickstart"]
           },
           {
             "group": "Core Concepts",
@@ -26,22 +35,22 @@
               {
                 "group": "Database",
                 "pages": [
-                  "database",
-                  "database/mcp"
+                  "core-concepts/database/overview",
+                  "core-concepts/database/mcp"
                 ]
               },
               {
                 "group": "Authentication",
                 "pages": [
-                  "authentication",
-                  "authentication/mcp"
+                  "core-concepts/authentication/overview",
+                  "core-concepts/authentication/mcp"
                 ]
               },
               {
                 "group": "Storage",
                 "pages": [
-                  "storage",
-                  "storage/mcp"
+                  "core-concepts/storage/overview",
+                  "core-concepts/storage/mcp"
                 ]
               }
             ]
@@ -49,8 +58,8 @@
           {
             "group": "Setup & Integration",
             "pages": [
-              "deployment",
-              "ai-tools"
+              "setup-integration/deployment",
+              "setup-integration/ai-tools"
             ]
           }
         ]

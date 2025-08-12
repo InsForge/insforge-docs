@@ -1,71 +1,47 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "Insforge Documentation",
+  "name": "Mint Starter Kit",
   "colors": {
     "primary": "#16A34A",
     "light": "#07C983",
     "dark": "#15803D"
   },
-  "appearance": {
-    "default": "dark"
-  },
-  "seo": {
-    "metatags": {
-      "og:site_name": "Insforge Documentation"
-    },
-    "indexing": "navigable"
-  },
-  "search": {
-    "prompt": "Search Insforge docs..."
-  },
   "favicon": "/favicon.svg",
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
+        "tab": "Guides",
         "groups": [
           {
-            "group": "Getting Started",
-            "pages": ["getting-started/introduction", "getting-started/quickstart"]
+            "group": "Getting started",
+            "pages": ["index", "quickstart", "development"]
           },
           {
-            "group": "Core Concepts",
+            "group": "Customization",
+            "pages": ["essentials/settings", "essentials/navigation"]
+          },
+          {
+            "group": "Writing content",
             "pages": [
-              {
-                "group": "Database",
-                "pages": [
-                  "core-concepts/database/overview",
-                  "core-concepts/database/mcp"
-                ]
-              },
-              {
-                "group": "Authentication",
-                "pages": [
-                  "core-concepts/authentication/overview",
-                  "core-concepts/authentication/mcp"
-                ]
-              },
-              {
-                "group": "Storage",
-                "pages": [
-                  "core-concepts/storage/overview",
-                  "core-concepts/storage/mcp"
-                ]
-              }
+              "essentials/markdown",
+              "essentials/code",
+              "essentials/images",
+              "essentials/reusable-snippets"
             ]
           },
           {
-            "group": "Setup & Integration",
+            "group": "AI tools",
             "pages": [
-              "setup-integration/deployment",
-              "setup-integration/ai-tools"
+              "ai-tools/cursor",
+              "ai-tools/claude-code",
+              "ai-tools/windsurf"
             ]
           }
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "API reference",
         "groups": [
           {
             "group": "API documentation",
@@ -153,13 +129,18 @@
     "global": {
       "anchors": [
         {
+          "anchor": "Documentation",
+          "href": "https://mintlify.com/docs",
+          "icon": "book-open-cover"
+        },
+        {
           "anchor": "Community",
-          "href": "https://discord.gg/DPVfYUtdQc",
-          "icon": "discord"
+          "href": "https://mintlify.com/community",
+          "icon": "slack"
         },
         {
           "anchor": "Blog",
-          "href": "https://insforge.dev/blogs",
+          "href": "https://mintlify.com/blog",
           "icon": "newspaper"
         }
       ]
@@ -167,20 +148,19 @@
   },
   "logo": {
     "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg",
-    "href": "https://insforge.dev"
+    "dark": "/logo/dark.svg"
   },
   "navbar": {
     "links": [
       {
         "label": "Support",
-        "href": "mailto:info@insforge.dev"
+        "href": "mailto:hi@mintlify.com"
       }
     ],
     "primary": {
       "type": "button",
       "label": "Dashboard",
-      "href": "https://insforge.dev/dashboard"
+      "href": "https://dashboard.mintlify.com"
     }
   },
   "contextual": {
@@ -197,9 +177,9 @@
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/InsForge_dev",
-      "github": "https://github.com/insforge",
-      "linkedin": "https://linkedin.com/company/insforge"
+      "x": "https://x.com/mintlify",
+      "github": "https://github.com/mintlify",
+      "linkedin": "https://linkedin.com/company/mintlify"
     }
   }
 }

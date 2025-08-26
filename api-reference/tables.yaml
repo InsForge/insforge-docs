@@ -4,55 +4,9 @@ info:
   version: 1.0.0
 
 paths:
-  /api/tables/field-types:
+  /api/database/tables:
     get:
-      summary: Get available field types
-      security:
-        - bearerAuth: []
-        - apiKey: []
-      responses:
-        '200':
-          description: List of available field types with SQL type mappings
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  type: object
-                  properties:
-                    sqlType:
-                      type: string
-                    defaultValue:
-                      type: string
-              example:
-                string:
-                  sqlType: TEXT
-                  defaultValue: "''"
-                integer:
-                  sqlType: INTEGER
-                  defaultValue: "0"
-                uuid:
-                  sqlType: TEXT
-                  defaultValue: gen_random_uuid()
-                boolean:
-                  sqlType: BOOLEAN
-                  defaultValue: "false"
-                datetime:
-                  sqlType: TIMESTAMPTZ
-                  defaultValue: "CURRENT_TIMESTAMP"
-                json:
-                  sqlType: JSONB
-                  defaultValue: "'{}'"
-                float:
-                  sqlType: REAL
-                  defaultValue: "0.0"
-                file:
-                  sqlType: TEXT
-                  defaultValue: "null"
-
-  /api/tables:
-    get:
-      summary: List tables
+      summary: List Tables
       security:
         - bearerAuth: []
         - apiKey: []
@@ -72,7 +26,7 @@ paths:
                 - "categories"
 
     post:
-      summary: Create table
+      summary: Create Table
       security:
         - bearerAuth: []
         - apiKey: []
@@ -83,10 +37,10 @@ paths:
             schema:
               type: object
               required:
-                - table_name
+                - tableName
                 - columns
               properties:
-                table_name:
+                tableName:
                   type: string
                 columns:
                   type: array
@@ -108,14 +62,14 @@ paths:
                         type: boolean
                       defaultValue:
                         type: string
-                      foreign_key:
+                      foreignKey:
                         type: object
                         properties:
                           table:
                             type: string
                           column:
                             type: string
-                          on_delete:
+                          onDelete:
                             type: string
                             enum: [CASCADE, SET NULL, NO ACTION, RESTRICT]
                             default: NO ACTION
@@ -133,7 +87,7 @@ paths:
                     type: string
               example:
                 message: "Table created successfully"
-                table_name: "posts"
+                tableName: "posts"
         '400':
           description: Bad request
           content:
@@ -144,7 +98,7 @@ paths:
                 error: "VALIDATION_ERROR"
                 message: "Table name already exists"
                 statusCode: 400
-                nextAction: "Choose a different table name"
+                nextActions: "Choose a different table name"
         '422':
           description: Unprocessable entity
           content:
@@ -155,16 +109,16 @@ paths:
                 error: "INVALID_FIELD_TYPE"
                 message: "Invalid field type: 'text'. Valid types are: string, integer, float, boolean, datetime, uuid, json, file"
                 statusCode: 422
-                nextAction: "Use one of the valid field types"
+                nextActions: "Use one of the valid field types"
 
-  /api/tables/{table}/schema:
+  /api/database/tables/{tableName}:
     get:
-      summary: Get table schema
+      summary: Get Table Schema
       security:
         - bearerAuth: []
         - apiKey: []
       parameters:
-        - name: table
+        - name: tableName
           in: path
           required: true
           schema:
@@ -195,9 +149,9 @@ paths:
                         default:
                           type: string
                           nullable: true
-                        is_primary_key:
+                        isPrimaryKey:
                           type: boolean
-                        foreign_key:
+                        foreignKey:
                           type: object
                           nullable: true
                           properties:
@@ -208,29 +162,29 @@ paths:
                             on_delete:
                               type: string
               example:
-                table_name: "posts"
+                tableName: "posts"
                 columns:
                   - name: "id"
                     type: "uuid"
                     nullable: false
                     unique: true
                     default: "gen_random_uuid()"
-                    is_primary_key: true
-                    foreign_key: null
+                    isPrimaryKey: true
+                    foreignKey: null
                   - name: "title"
                     type: "string"
                     nullable: false
                     unique: false
                     default: null
-                    is_primary_key: false
-                    foreign_key: null
-                  - name: "user_id"
+                    isPrimaryKey: false
+                    foreignKey: null
+                  - name: "userId"
                     type: "uuid"
                     nullable: false
                     unique: false
                     default: null
-                    is_primary_key: false
-                    foreign_key:
+                    isPrimaryKey: false
+                    foreignKey:
                       table: "users"
                       column: "id"
                       on_delete: "CASCADE"
@@ -244,16 +198,14 @@ paths:
                 error: "TABLE_NOT_FOUND"
                 message: "Table 'nonexistent' does not exist"
                 statusCode: 404
-                nextAction: "Check table name and try again"
-
-  /api/tables/{table}:
+                nextActions: "Check table name and try again"
     patch:
-      summary: Modify table schema
+      summary: Update Table Schema
       security:
         - bearerAuth: []
         - apiKey: []
       parameters:
-        - name: table
+        - name: tableName
           in: path
           required: true
           schema:
@@ -265,30 +217,112 @@ paths:
             schema:
               type: object
               properties:
-                add_columns:
+                addColumns:
                   type: array
+                  description: Add new columns to the table
                   items:
                     type: object
+                    required:
+                      - columnName
+                      - type
                     properties:
-                      name:
+                      columnName:
                         type: string
+                        description: Name of the new column
                       type:
                         type: string
-                      nullable:
+                        enum: [string, integer, float, boolean, datetime, uuid, json, file]
+                        description: Data type of the column
+                      isNullable:
                         type: boolean
-                      default_value:
+                        default: true
+                        description: Whether the column allows NULL values
+                      isUnique:
+                        type: boolean
+                        default: false
+                        description: Whether the column values must be unique
+                      defaultValue:
                         type: string
-                drop_columns:
+                        description: Default value for the column
+                dropColumns:
                   type: array
+                  description: Remove columns from the table
                   items:
                     type: string
-                rename_columns:
-                  type: object
-                  additionalProperties:
+                    description: Name of the column to drop
+                updateColumns:
+                  type: array
+                  description: Modify existing columns (rename or change default)
+                  items:
+                    type: object
+                    required:
+                      - columnName
+                    properties:
+                      columnName:
+                        type: string
+                        description: Current name of the column
+                      newColumnName:
+                        type: string
+                        description: New name for the column (optional)
+                        minLength: 1
+                        maxLength: 64
+                      defaultValue:
+                        type: string
+                        description: New default value for the column (optional)
+                addForeignKeys:
+                  type: array
+                  description: Add foreign key constraints to existing columns
+                  items:
+                    type: object
+                    required:
+                      - columnName
+                      - foreignKey
+                    properties:
+                      columnName:
+                        type: string
+                        description: Name of the column to add foreign key to
+                      foreignKey:
+                        type: object
+                        required:
+                          - referenceTable
+                          - referenceColumn
+                        properties:
+                          referenceTable:
+                            type: string
+                            description: Table being referenced
+                          referenceColumn:
+                            type: string
+                            description: Column being referenced
+                          onDelete:
+                            type: string
+                            enum: [CASCADE, SET NULL, NO ACTION, RESTRICT]
+                            default: RESTRICT
+                            description: Action on delete
+                          onUpdate:
+                            type: string
+                            enum: [CASCADE, SET NULL, NO ACTION, RESTRICT]
+                            default: RESTRICT
+                            description: Action on update
+                dropForeignKeys:
+                  type: array
+                  description: Remove foreign key constraints from columns
+                  items:
                     type: string
+                    description: Name of the column with foreign key to drop
+                renameTable:
+                  type: object
+                  description: Rename the table
+                  required:
+                    - newTableName
+                  properties:
+                    newTableName:
+                      type: string
+                      description: New name for the table
+                      minLength: 1
+                      maxLength: 64
       responses:
         '200':
-          description: Table modified
+          description: Table schema updated successfully
           content:
             application/json:
               schema:
@@ -296,50 +330,67 @@ paths:
                 properties:
                   message:
                     type: string
-                  table_name:
+                    description: Success message
+                  tableName:
                     type: string
-                  modifications:
-                    type: object
-                    properties:
-                      added_columns:
-                        type: array
-                        items:
-                          type: string
-                      dropped_columns:
-                        type: array
-                        items:
-                          type: string
-                      renamed_columns:
-                        type: object
-                        additionalProperties:
-                          type: string
+                    description: Name of the updated table
+                  operations:
+                    type: array
+                    description: List of operations performed
+                    items:
+                      type: string
               example:
-                message: "Table modified successfully"
-                table_name: "posts"
-                modifications:
-                  added_columns: ["published_at"]
-                  dropped_columns: ["draft"]
-                  renamed_columns:
-                    content: "body"
+                message: "Table schema updated successfully"
+                tableName: "posts"
+                operations: 
+                  - "added 2 columns"
+                  - "dropped 1 columns"
+                  - "renamed 1 columns"
+                  - "added 1 foreign keys"
+                  - "dropped 1 foreign keys"
         '400':
           description: Bad request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                columnExists:
+                  value:
+                    error: "COLUMN_EXISTS"
+                    message: "Column 'title' already exists in table 'posts'"
+                    statusCode: 400
+                    nextActions: "Choose a different column name or drop it first"
+                columnNotFound:
+                  value:
+                    error: "COLUMN_NOT_FOUND"
+                    message: "Column 'nonexistent' not found in table 'posts'"
+                    statusCode: 400
+                    nextActions: "Check column name with GET /api/tables/{tableName}/schema"
+                foreignKeyExists:
+                  value:
+                    error: "FOREIGN_KEY_EXISTS"
+                    message: "Foreign key on column 'user_id' already exists"
+                    statusCode: 400
+                    nextActions: "Drop the existing foreign key first or use a different column"
+        '404':
+          description: Table not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
               example:
-                error: "COLUMN_EXISTS"
-                message: "Column 'title' already exists in table 'posts'"
-                statusCode: 400
-                nextAction: "Choose a different column name or drop it first"
-
+                error: "TABLE_NOT_FOUND"
+                message: "Table 'nonexistent' does not exist"
+                statusCode: 404
+                nextActions: "Check table name and try again"
     delete:
-      summary: Delete table
+      summary: Delete Table
       security:
         - bearerAuth: []
         - apiKey: []
       parameters:
-        - name: table
+        - name: tableName
           in: path
           required: true
           schema:
@@ -358,7 +409,7 @@ paths:
                     type: string
               example:
                 message: "Table deleted successfully"
-                table_name: "posts"
+                tableName: "posts"
         '404':
           description: Table not found
           content:
@@ -369,7 +420,7 @@ paths:
                 error: "TABLE_NOT_FOUND"
                 message: "Table 'nonexistent' does not exist"
                 statusCode: 404
-                nextAction: "Check table name and try again"
+                nextActions: "Check table name and try again"
 
 components:
   securitySchemes:
@@ -398,6 +449,6 @@ components:
         statusCode:
           type: integer
           description: HTTP status code
-        nextAction:
+        nextActions:
           type: string
           description: Suggested action to resolve the error

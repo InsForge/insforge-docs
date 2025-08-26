@@ -71,10 +71,6 @@
         "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
-            "pages": ["api-reference/introduction"]
-          },
-          {
             "group": "Tables",
             "openapi": "/api-reference/tables.yaml"
           },

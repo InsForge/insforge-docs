@@ -87,6 +87,10 @@
             "openapi": "/api-reference/storage.yaml"
           },
           {
+            "group": "AI",
+            "openapi": "/api-reference/ai.yaml"
+          },
+          {
             "group": "Logs",
             "openapi": "/api-reference/logs.yaml"
           },

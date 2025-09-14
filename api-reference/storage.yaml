@@ -186,38 +186,32 @@ paths:
       responses:
         '200':
           description: List of objects in bucket
-          headers:
-            X-Total-Count:
-              schema:
-                type: integer
-              description: Total number of objects in the bucket
-            X-Page:
-              schema:
-                type: integer
-              description: Current page number
-            X-Page-Size:
-              schema:
-                type: integer
-              description: Number of items per page
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  bucket:
-                    type: string
-                    example: avatars
-                  prefix:
-                    type: string
-                    example: users/
-                  objects:
+                  data:
                     type: array
                     items:
                       $ref: '#/components/schemas/StoredFile'
+                  pagination:
+                    type: object
+                    properties:
+                      offset:
+                        type: integer
+                        example: 0
+                      limit:
+                        type: integer
+                        example: 100
+                      total:
+                        type: integer
+                        example: 2
+                  nextActions:
+                    type: string
+                    example: "You can use PUT /api/storage/buckets/:bucketName/objects/:objectKey to upload with a specific key, or POST /api/storage/buckets/:bucketName/objects to upload with auto-generated key, and GET /api/storage/buckets/:bucketName/objects/:objectKey to download an object."
               example:
-                bucket: "avatars"
-                prefix: "users/"
-                objects:
+                data:
                   - bucket: "avatars"
                     key: "users/user123.jpg"
                     size: 102400
@@ -230,6 +224,11 @@ paths:
                     mimeType: "image/png"
                     uploadedAt: "2024-01-16T11:00:00Z"
                     url: "/api/storage/buckets/avatars/objects/users/user456.png"
+                pagination:
+                  offset: 0
+                  limit: 100
+                  total: 2
+                nextActions: "You can use PUT /api/storage/buckets/:bucketName/objects/:objectKey to upload with a specific key, or POST /api/storage/buckets/:bucketName/objects to upload with auto-generated key, and GET /api/storage/buckets/:bucketName/objects/:objectKey to download an object."
 
     delete:
       summary: Delete Bucket
@@ -328,6 +327,80 @@ paths:
                 message: "Bucket 'nonexistent' does not exist"
                 statusCode: 404
                 nextActions: "Create the bucket first"
+
+  /api/storage/buckets/{bucketName}/upload-strategy:
+    post:
+      summary: Get Upload Strategy (Direct or Presigned URL)
+      description: Returns upload strategy based on storage backend (S3 returns presigned URLs, local returns direct upload endpoints)
+      security:
+        - apiKey: []
+      parameters:
+        - name: bucketName
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          example: avatars
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - filename
+              properties:
+                filename:
+                  type: string
+                  description: Original filename for generating unique key
+                  example: profile-photo.jpg
+                contentType:
+                  type: string
+                  description: MIME type of the file
+                  example: image/jpeg
+                size:
+                  type: integer
+                  description: File size in bytes
+                  example: 102400
+      responses:
+        '200':
+          description: Upload strategy details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadStrategy'
+              examples:
+                s3:
+                  summary: S3 Backend Response
+                  value:
+                    method: presigned
+                    uploadUrl: https://s3-bucket.amazonaws.com/
+                    fields:
+                      bucket: my-s3-bucket
+                      key: app-key/avatars/profile-photo-1234567890-abc123.jpg
+                      X-Amz-Algorithm: AWS4-HMAC-SHA256
+                      X-Amz-Credential: AKIA.../20250905/us-east-2/s3/aws4_request
+                      X-Amz-Date: 20250905T000000Z
+                      Policy: eyJ...
+                      X-Amz-Signature: abc123...
+                    key: profile-photo-1234567890-abc123.jpg
+                    confirmRequired: true
+                    confirmUrl: /api/storage/buckets/avatars/objects/profile-photo-1234567890-abc123.jpg/confirm-upload
+                    expiresAt: "2025-09-05T01:00:00Z"
+                local:
+                  summary: Local Storage Response
+                  value:
+                    method: direct
+                    uploadUrl: /api/storage/buckets/avatars/objects/profile-photo-1234567890-abc123.jpg
+                    key: profile-photo-1234567890-abc123.jpg
+                    confirmRequired: false
+        '404':
+          description: Bucket not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /api/storage/buckets/{bucketName}/objects/{objectKey}:
     put:
@@ -488,6 +561,141 @@ paths:
                 statusCode: 404
                 nextActions: "Check the bucket and key combination"
 
+  /api/storage/buckets/{bucketName}/objects/{objectKey}/confirm-upload:
+    post:
+      summary: Confirm Presigned Upload
+      description: Confirms that a file was successfully uploaded to S3 using presigned URL
+      security:
+        - apiKey: []
+      parameters:
+        - name: bucketName
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          example: avatars
+        - name: objectKey
+          in: path
+          required: true
+          schema:
+            type: string
+          example: profile-photo-1234567890-abc123.jpg
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - size
+              properties:
+                size:
+                  type: integer
+                  description: File size in bytes
+                  example: 102400
+                contentType:
+                  type: string
+                  description: MIME type of the file
+                  example: image/jpeg
+                etag:
+                  type: string
+                  description: S3 ETag of the uploaded object (optional)
+                  example: "9bb58f26192e4ba00f01e2e7b136bbd8"
+      responses:
+        '201':
+          description: Upload confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StoredFile'
+        '404':
+          description: Upload not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "UPLOAD_NOT_FOUND"
+                message: "Upload not found for key 'profile-photo.jpg' in bucket 'avatars'"
+                statusCode: 404
+        '409':
+          description: Already confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "ALREADY_CONFIRMED"
+                message: "File 'profile-photo.jpg' already confirmed in bucket 'avatars'"
+                statusCode: 409
+
+  /api/storage/buckets/{bucketName}/objects/{objectKey}/download-strategy:
+    post:
+      summary: Get Download Strategy (Direct or Presigned URL)
+      description: |
+        Returns download strategy based on storage backend and bucket visibility.
+        - S3 with public bucket: Direct URLs (no presigning, better performance)
+        - S3 with private bucket: Presigned URLs with expiration
+        - Local storage: Always direct endpoints
+      security:
+        - apiKey: []
+      parameters:
+        - name: bucketName
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          example: avatars
+        - name: objectKey
+          in: path
+          required: true
+          schema:
+            type: string
+          example: profile-photo.jpg
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                expiresIn:
+                  type: integer
+                  description: URL expiration time in seconds (default 3600)
+                  example: 3600
+                  default: 3600
+      responses:
+        '200':
+          description: Download strategy details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DownloadStrategy'
+              examples:
+                s3-public:
+                  summary: S3 Public Bucket Response
+                  value:
+                    method: direct
+                    url: https://s3-bucket.s3.us-east-2.amazonaws.com/app-key/public-assets/logo.png
+                s3-private:
+                  summary: S3 Private Bucket Response
+                  value:
+                    method: presigned
+                    url: https://s3-bucket.s3.us-east-2.amazonaws.com/app-key/avatars/profile.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...
+                    expiresAt: "2025-09-05T01:00:00Z"
+                local:
+                  summary: Local Storage Response
+                  value:
+                    method: direct
+                    url: /api/storage/buckets/avatars/objects/profile-photo.jpg
+        '404':
+          description: Object not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     apiKey:
@@ -547,6 +755,77 @@ components:
         - limit
         - offset
         - total
+
+    UploadStrategy:
+      type: object
+      required:
+        - method
+        - uploadUrl
+        - key
+        - confirmRequired
+      properties:
+        method:
+          type: string
+          enum: [presigned, direct]
+          description: Upload method - presigned for S3, direct for local storage
+          example: presigned
+        uploadUrl:
+          type: string
+          description: URL to upload the file to
+          example: https://s3-bucket.amazonaws.com/
+        fields:
+          type: object
+          description: Form fields for presigned POST (S3 only)
+          additionalProperties: true
+          example:
+            bucket: my-s3-bucket
+            key: app-key/avatars/profile.jpg
+            X-Amz-Algorithm: AWS4-HMAC-SHA256
+        key:
+          type: string
+          description: Generated unique key for the file
+          example: profile-photo-1234567890-abc123.jpg
+        confirmRequired:
+          type: boolean
+          description: Whether upload confirmation is required
+          example: true
+        confirmUrl:
+          type: string
+          description: URL to confirm the upload (if confirmRequired is true)
+          example: /api/storage/buckets/avatars/objects/profile.jpg/confirm-upload
+        expiresAt:
+          type: string
+          format: date-time
+          description: Expiration time for presigned URL (S3 only)
+          example: "2025-09-05T01:00:00Z"
+
+    DownloadStrategy:
+      type: object
+      required:
+        - method
+        - url
+      properties:
+        method:
+          type: string
+          enum: [presigned, direct]
+          description: |
+            Download method:
+            - `direct`: Direct URL access (S3 public buckets or local storage)
+            - `presigned`: Secure URL with signature and expiration (S3 private buckets)
+          example: direct
+        url:
+          type: string
+          description: URL to download the file from
+          example: https://s3-bucket.s3.us-east-2.amazonaws.com/app-key/public-assets/logo.png
+        expiresAt:
+          type: string
+          format: date-time
+          description: Expiration time for presigned URLs (only present when method is 'presigned')
+          example: "2025-09-05T01:00:00Z"
+        headers:
+          type: object
+          description: Optional headers to include in the download request
+          additionalProperties: true
 
     ErrorResponse:
       type: object

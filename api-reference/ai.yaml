@@ -1,0 +1,669 @@
+openapi: 3.0.3
+info:
+  title: Insforge AI API
+  version: 1.0.0
+  description: AI services for chat and image generation with OpenRouter integration
+
+paths:
+  /api/ai/models:
+    get:
+      summary: Get all available AI models
+      description: Returns list of all available text and image models from OpenRouter
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of available models categorized by type
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListModelsResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Failed to get models list
+
+  /api/ai/chat/completion:
+    post:
+      summary: Send chat completion request
+      description: Send a chat message to any supported model with optional streaming
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRequest'
+      responses:
+        '200':
+          description: Chat completion response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+            text/event-stream:
+              schema:
+                type: string
+                description: Server-sent events stream for streaming responses
+        '400':
+          description: Invalid request - missing model or messages
+        '401':
+          description: Unauthorized
+        '500':
+          description: Failed to get response
+
+  /api/ai/image/generation:
+    post:
+      summary: Generate images
+      description: Generate images using specified model and prompt
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageGenerationOptions'
+      responses:
+        '201':
+          description: Images generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  model:
+                    type: string
+                    description: Model used for generation
+                  images:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/OpenRouterImageMessage'
+                  text:
+                    type: string
+                    description: Text content from multimodal models
+                  count:
+                    type: integer
+                    description: Number of images generated
+                  metadata:
+                    type: object
+                    properties:
+                      model:
+                        type: string
+                      revisedPrompt:
+                        type: string
+                      usage:
+                        $ref: '#/components/schemas/TokenUsage'
+                  nextActions:
+                    type: string
+                    example: Images have been generated successfully. Use the returned URLs or base64 data to access them.
+        '400':
+          description: Invalid request - missing model or prompt
+        '401':
+          description: Unauthorized
+        '500':
+          description: Failed to generate image
+
+  /api/ai/configurations:
+    post:
+      summary: Create AI configuration
+      description: Create a new AI configuration with model and system prompt
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAIConfigurationRequest'
+      responses:
+        '201':
+          description: AI configuration created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  message:
+                    type: string
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+        '500':
+          description: Failed to create AI configuration
+
+    get:
+      summary: List AI configurations
+      description: Get all AI configurations
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of AI configurations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AIConfiguration'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Failed to fetch AI configurations
+
+  /api/ai/configurations/{id}:
+    patch:
+      summary: Update AI configuration
+      description: Update an existing AI configuration's system prompt
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAIConfigurationRequest'
+      responses:
+        '200':
+          description: AI configuration updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+        '404':
+          description: AI configuration not found
+        '500':
+          description: Failed to update AI configuration
+
+    delete:
+      summary: Delete AI configuration
+      description: Delete an AI configuration
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: AI configuration deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          description: Unauthorized
+        '404':
+          description: AI configuration not found
+        '500':
+          description: Failed to delete AI configuration
+
+  /api/ai/usage/summary:
+    get:
+      summary: Get AI usage summary
+      description: Get AI usage summary statistics
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: configId
+          schema:
+            type: string
+            format: uuid
+          description: Filter by configuration ID
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Start date for usage period
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: End date for usage period
+      responses:
+        '200':
+          description: Usage summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIUsageSummary'
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+        '500':
+          description: Failed to fetch usage summary
+
+  /api/ai/usage:
+    get:
+      summary: Get AI usage records
+      description: Get AI usage records with pagination
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Start date for usage period
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: End date for usage period
+        - in: query
+          name: limit
+          schema:
+            type: string
+            default: "50"
+          description: Number of records to return
+        - in: query
+          name: offset
+          schema:
+            type: string
+            default: "0"
+          description: Number of records to skip
+      responses:
+        '200':
+          description: Usage records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AIUsageRecord'
+        '400':
+          description: Validation error
+        '401':
+          description: Unauthorized
+        '500':
+          description: Failed to fetch usage records
+
+  /api/ai/usage/config/{configId}:
+    get:
+      summary: Get usage by configuration
+      description: Get usage records for a specific AI configuration
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: configId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: startDate
+          schema:
+            type: string
+            format: date-time
+          description: Start date for usage period
+        - in: query
+          name: endDate
+          schema:
+            type: string
+            format: date-time
+          description: End date for usage period
+      responses:
+        '200':
+          description: Configuration usage records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AIUsageRecord'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Failed to fetch config usage records
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    apiKey:
+      type: apiKey
+      in: header
+      name: x-api-key
+
+  schemas:
+    ChatMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system]
+          description: Role of the message sender
+        content:
+          type: string
+          description: Message content
+
+    ChatRequest:
+      type: object
+      required:
+        - model
+      properties:
+        model:
+          type: string
+          description: OpenRouter model identifier
+          example: openai/gpt-4
+        messages:
+          type: array
+          description: Array of messages for conversation
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        stream:
+          type: boolean
+          default: false
+          description: Enable streaming response via Server-Sent Events
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          description: Controls randomness in generation
+        maxTokens:
+          type: integer
+          description: Maximum number of tokens to generate
+        topP:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Nucleus sampling parameter
+        systemPrompt:
+          type: string
+          description: System prompt to guide model behavior
+
+    ChatCompletionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        content:
+          type: string
+          description: AI model response
+        metadata:
+          type: object
+          properties:
+            model:
+              type: string
+            usage:
+              $ref: '#/components/schemas/TokenUsage'
+
+    TokenUsage:
+      type: object
+      properties:
+        promptTokens:
+          type: integer
+        completionTokens:
+          type: integer
+        totalTokens:
+          type: integer
+
+    ImageGenerationOptions:
+      type: object
+      required:
+        - model
+        - prompt
+      properties:
+        model:
+          type: string
+          description: OpenRouter model identifier for image generation
+          example: openai/dall-e-3
+        prompt:
+          type: string
+          description: Text prompt describing the desired image
+          example: "A serene landscape with mountains and a lake at sunset"
+
+    OpenRouterImageMessage:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [image_url]
+        image_url:
+          type: object
+          properties:
+            url:
+              type: string
+              description: Can be a direct URL or data:image base64 URL
+
+    OpenRouterModel:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        created:
+          type: integer
+        description:
+          type: string
+        architecture:
+          type: object
+          properties:
+            input_modalities:
+              type: array
+              items:
+                type: string
+            output_modalities:
+              type: array
+              items:
+                type: string
+            tokenizer:
+              type: string
+            instruct_type:
+              type: string
+        topProvider:
+          type: object
+          properties:
+            is_moderated:
+              type: boolean
+            context_length:
+              type: integer
+            max_completion_tokens:
+              type: integer
+        pricing:
+          type: object
+          properties:
+            prompt:
+              type: string
+            completion:
+              type: string
+            image:
+              type: string
+            request:
+              type: string
+            web_search:
+              type: string
+            internal_reasoning:
+              type: string
+            input_cache_read:
+              type: string
+            input_cache_write:
+              type: string
+        context_length:
+          type: integer
+        max_completion_tokens:
+          type: integer
+        per_request_limits:
+          type: object
+        supported_parameters:
+          type: array
+          items:
+            type: string
+
+    ListModelsResponse:
+      type: object
+      properties:
+        text:
+          type: array
+          items:
+            type: object
+            properties:
+              provider:
+                type: string
+                example: openrouter
+              configured:
+                type: boolean
+              models:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OpenRouterModel'
+        image:
+          type: array
+          items:
+            type: object
+            properties:
+              provider:
+                type: string
+                example: openrouter
+              configured:
+                type: boolean
+              models:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OpenRouterModel'
+
+    CreateAIConfigurationRequest:
+      type: object
+      required:
+        - modality
+        - provider
+        - modelId
+      properties:
+        modality:
+          type: string
+          enum: [text, image]
+        provider:
+          type: string
+          example: openrouter
+        modelId:
+          type: string
+          example: openai/gpt-4
+        systemPrompt:
+          type: string
+          description: Optional system prompt for the configuration
+
+    UpdateAIConfigurationRequest:
+      type: object
+      properties:
+        systemPrompt:
+          type: string
+          description: Updated system prompt
+
+    AIConfiguration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        modality:
+          type: string
+          enum: [text, image]
+        provider:
+          type: string
+        modelId:
+          type: string
+        systemPrompt:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AIUsageSummary:
+      type: object
+      properties:
+        totalRequests:
+          type: integer
+        totalTokens:
+          type: integer
+        totalCost:
+          type: number
+        byModel:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              requests:
+                type: integer
+              tokens:
+                type: integer
+              cost:
+                type: number
+
+    AIUsageRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        configId:
+          type: string
+          format: uuid
+        modelId:
+          type: string
+        promptTokens:
+          type: integer
+        completionTokens:
+          type: integer
+        totalTokens:
+          type: integer
+        cost:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Additional error details
+        code:
+          type: string
+          description: Error code for programmatic handling

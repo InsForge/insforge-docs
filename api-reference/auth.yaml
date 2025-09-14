@@ -9,6 +9,8 @@ paths:
     post:
       summary: Register new user
       description: Creates a new user account
+      tags:
+          - Client
       requestBody:
         required: true
         content:
@@ -67,6 +69,8 @@ paths:
     get:
       summary: List all users (admin only)
       description: Returns paginated list of users
+      tags:
+        - Admin
       security:
         - bearerAuth: []
       parameters:
@@ -130,6 +134,8 @@ paths:
     delete:
       summary: Delete users (admin only)
       description: Delete multiple users by their IDs
+      tags:
+        - Admin
       security:
         - bearerAuth: []
       requestBody:
@@ -166,6 +172,8 @@ paths:
     post:
       summary: User login
       description: Authenticates user and returns access token
+      tags:
+        - Client
       requestBody:
         required: true
         content:
@@ -216,6 +224,8 @@ paths:
     get:
       summary: Get current user
       description: Returns the currently authenticated user
+      tags:
+        - Client
       security:
         - bearerAuth: []
       responses:
@@ -244,6 +254,8 @@ paths:
     post:
       summary: Admin login
       description: Authenticates admin user for dashboard access
+      tags:
+        - Admin
       requestBody:
         required: true
         content:
@@ -290,6 +302,8 @@ paths:
     post:
       summary: Exchange cloud provider authorization code for admin session
       description: Verifies an authorization code/JWT from from Insforge Cloud platform and issues an internal admin session token with project_admin role
+      tags:
+        - Admin
       requestBody:
         required: true
         content:
@@ -344,10 +358,10 @@ paths:
     post:
       summary: Generate anonymous token
       description: Generate a non-expiring anonymous JWT token for public API access (admin only)
+      tags:
+        - Client
       security:
         - bearerAuth: []
-      tags:
-        - Authentication
       responses:
         '200':
           description: Anonymous token generated successfully
@@ -372,6 +386,8 @@ paths:
   /api/auth/oauth/google:
     get:
       summary: Initiate Google OAuth flow
+      tags:
+        - Client
       parameters:
         - name: redirect_uri
           in: query
@@ -388,6 +404,8 @@ paths:
   /api/auth/oauth/github:
     get:
       summary: Initiate GitHub OAuth flow
+      tags:
+        - Client
       parameters:
         - name: redirect_uri
           in: query
@@ -405,6 +423,8 @@ paths:
     get:
       summary: Shared OAuth callback handler
       description: Handles OAuth callbacks from all providers
+      tags:
+        - Client
       parameters:
         - name: code
           in: query
@@ -434,6 +454,8 @@ paths:
     get:
       summary: Provider-specific OAuth callback
       description: Alternative callback endpoint for specific providers
+      tags:
+        - Client
       parameters:
         - name: provider
           in: path

@@ -30,7 +30,7 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["introduction", "quickstart"]
+            "pages": ["introduction", "quickstart", "mcp-installation"]
           },
           {
             "group": "Core Concepts",
@@ -38,31 +38,27 @@
               {
                 "group": "Database",
                 "pages": [
-                  "core-concepts/database/overview",
-                  "core-concepts/database/mcp"
+                  "core-concepts/database/overview"
                 ]
               },
               {
                 "group": "Authentication",
                 "pages": [
-                  "core-concepts/authentication/overview",
-                  "core-concepts/authentication/mcp"
+                  "core-concepts/authentication/overview"
                 ]
               },
               {
                 "group": "Storage",
                 "pages": [
-                  "core-concepts/storage/overview",
-                  "core-concepts/storage/mcp"
+                  "core-concepts/storage/overview"
+                ]
+              },
+              {
+                "group": "AI Integration",
+                "pages": [
+                  "core-concepts/ai/overview"
                 ]
               }
-            ]
-          },
-          {
-            "group": "Setup & Integration",
-            "pages": [
-              "setup-integration/deployment",
-              "setup-integration/ai-tools"
             ]
           }
         ]
@@ -87,7 +83,7 @@
             "openapi": "/api-reference/storage.yaml"
           },
           {
-            "group": "AI",
+            "group": "AI Integration",
             "openapi": "/api-reference/ai.yaml"
           },
           {

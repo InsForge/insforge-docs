@@ -1,123 +1,327 @@
 ---
-title: Authentication Overview
-description: Built-in user management and JWT-based authentication
+title: SDK
+description: Built-in user management with OAuth and profile support
 ---
 
-InsForge includes complete authentication. No setup required.
+InsForge SDK provides complete authentication with JWT tokens, OAuth providers, and user profiles.
 
-## How It Works
+<CodeGroup>
+```bash npm
+npm install @insforge/sdk
+```
 
-Users → Sessions → Protected APIs
+```bash yarn
+yarn add @insforge/sdk
+```
 
-1. User registers or logs in
-2. Receives JWT access token (valid 7 days)
-3. Includes token in API requests
-4. Backend validates and identifies user
-
-## Core Endpoints
+```bash pnpm
+pnpm add @insforge/sdk
+```
+</CodeGroup>
 
 ```javascript
-// Register
-POST /api/auth/users
-{ email, password, name }
+import { createClient } from '@insforge/sdk';
 
-// Login  
-POST /api/auth/sessions
-{ email, password }
+const insforge = createClient({
+  baseUrl: 'https://your-app.us-east.insforge.app'
+});
+```
 
-// Get current user
-GET /api/auth/sessions/current
-Authorization: Bearer TOKEN
+## Basic Authentication
 
-// Response structure
-{
-  accessToken: "...",
-  user: { id: "...", email: "...", name: "..." }
+### Sign Up
+
+<CodeGroup>
+```javascript Basic Sign Up
+const { data, error } = await insforge.auth.signUp({
+  email: 'user@example.com',
+  password: 'secure_password123'
+})
+
+// Returns: { data: { user, accessToken }, error }
+```
+
+```javascript With Name
+const { data, error } = await insforge.auth.signUp({
+  email: 'user@example.com',
+  password: 'secure_password123',
+  name: 'John Doe'
+})
+```
+</CodeGroup>
+
+### Sign In
+
+```javascript
+const { data, error } = await insforge.auth.signInWithPassword({
+  email: 'user@example.com',
+  password: 'secure_password123'
+})
+
+if (data) {
+  // Token is automatically stored and used for future requests
+  console.log('Logged in:', data.user)
+  console.log('Token:', data.accessToken)
 }
 ```
 
-## The User Table
+### Sign Out
 
-The `_user` table is special:
-- **Read** via database API: ✅
-- **Modify** via database API: ❌
-- **Modify** via auth endpoints: ✅
+```javascript
+const { error } = await insforge.auth.signOut()
+// Clears stored tokens and session
+```
 
-This ensures security policies are enforced.
+## OAuth Authentication
+
+The SDK includes automatic OAuth callback detection (v0.0.14+). When users return from OAuth providers, the SDK automatically handles the authentication.
+
+<CodeGroup>
+```javascript Google OAuth
+// Redirects to Google OAuth
+await insforge.auth.signInWithOAuth({
+  provider: 'google',
+  redirectTo: 'http://localhost:3000/dashboard'
+})
+
+// SDK automatically detects and handles the OAuth callback
+```
+
+```javascript GitHub OAuth
+// Redirects to GitHub OAuth
+await insforge.auth.signInWithOAuth({
+  provider: 'github',
+  redirectTo: 'http://localhost:3000/dashboard'
+})
+```
+
+```javascript Get URL Only
+// Returns URL without redirecting
+const { data } = await insforge.auth.signInWithOAuth({
+  provider: 'google',
+  skipBrowserRedirect: true
+})
+
+console.log('OAuth URL:', data.url)
+```
+</CodeGroup>
+
+<Note>
+OAuth requires environment variables to be configured on the backend:
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`
+</Note>
 
 ## Session Management
 
-```javascript
-// After login
-localStorage.setItem('access_token', accessToken);
-localStorage.setItem('user_id', user.id);
+### Get Current User
 
-// For API calls
+```javascript
+// Gets current authenticated user with profile
+const { data, error } = await insforge.auth.getCurrentUser()
+
+if (data) {
+  console.log('Auth info:', data.user)    // { id, email, role }
+  console.log('Profile:', data.profile)   // { nickname, avatar_url, bio, ... }
+}
+```
+
+### Get Current Session
+
+```javascript
+// Gets session from local storage (no API call)
+const { data, error } = await insforge.auth.getCurrentSession()
+
+if (data?.session) {
+  console.log('Token:', data.session.accessToken)
+  console.log('User:', data.session.user)
+}
+```
+
+## User Profiles
+
+InsForge separates authentication (system) from profiles (user data):
+
+### Get Any User's Profile
+
+```javascript
+// Get profile by user ID
+const { data: profile, error } = await insforge.auth.getProfile('user-id-123')
+
+console.log(profile)
+// { id, nickname, avatar_url, bio, birthday, ... }
+```
+
+### Update Current User's Profile
+
+```javascript
+const { data: profile, error } = await insforge.auth.setProfile({
+  nickname: 'CoolDev',
+  avatar_url: 'https://example.com/avatar.jpg',
+  bio: 'Full-stack developer',
+  birthday: '1990-01-01'
+})
+```
+
+## React Hook Example
+
+Create a reusable auth hook for React applications:
+
+```javascript
+import { createClient } from '@insforge/sdk';
+import { useState, useEffect } from 'react';
+
+const insforge = createClient({
+  baseUrl: 'https://your-app.us-east.insforge.app'
+});
+
+export function useAuth() {
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check for existing session
+    insforge.auth.getCurrentUser().then(({ data }) => {
+      if (data) {
+        setUser(data.user);
+        setProfile(data.profile);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  const signIn = async (email, password) => {
+    const { data, error } = await insforge.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (data) {
+      setUser(data.user);
+      // Fetch profile after login
+      const { data: profileData } = await insforge.auth.getCurrentUser();
+      setProfile(profileData?.profile);
+    }
+    
+    return { data, error };
+  };
+
+  const signOut = async () => {
+    await insforge.auth.signOut();
+    setUser(null);
+    setProfile(null);
+  };
+
+  return {
+    user,
+    profile,
+    loading,
+    signIn,
+    signOut,
+    signInWithOAuth: insforge.auth.signInWithOAuth,
+    updateProfile: insforge.auth.setProfile
+  };
+}
+```
+
+## Protected API Calls
+
+The SDK automatically includes authentication tokens for all requests:
+
+```javascript
+// No need to manually add Authorization header
+const { data, error } = await insforge.database
+  .from('posts')
+  .insert({ 
+    title: 'My Post',
+    content: 'This is automatically authenticated'
+  })
+  .select()
+```
+
+## Error Handling
+
+Auth operations return structured errors:
+
+```javascript
+const { data, error } = await insforge.auth.signInWithPassword({
+  email: 'user@example.com',
+  password: 'wrong_password'
+})
+
+if (error) {
+  console.error({
+    statusCode: error.statusCode,  // 401
+    error: error.error,            // 'INVALID_CREDENTIALS'
+    message: error.message,        // 'Invalid login credentials'
+    nextActions: error.nextActions // 'Check email and password'
+  })
+}
+```
+
+## Token Storage
+
+<CardGroup cols={2}>
+  <Card title="Browser" icon="browser">
+    Tokens stored in localStorage automatically
+  </Card>
+  
+  <Card title="Node.js" icon="node">
+    In-memory Map storage by default
+  </Card>
+  
+  <Card title="React Native" icon="mobile">
+    Provide custom storage via config
+  </Card>
+  
+  <Card title="Custom" icon="gear">
+    Implement your own storage adapter
+  </Card>
+</CardGroup>
+
+## Security Features
+
+- **JWT Tokens** - Access tokens valid for 7 days
+- **Automatic Refresh** - SDK handles token renewal
+- **Password Hashing** - Bcrypt with salt rounds
+- **Rate Limiting** - Built-in protection against brute force
+- **CSRF Protection** - Automatic for session-based auth
+
+## Migration from REST API
+
+<CodeGroup>
+```javascript Before (REST API)
+// Manual token management
+const res = await fetch('/api/auth/sessions', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password })
+})
+const { accessToken, user } = await res.json()
+localStorage.setItem('access_token', accessToken)
+localStorage.setItem('user_id', user.id)
+
+// Manual header inclusion
 fetch('/api/database/records/posts', {
   headers: {
     'Authorization': `Bearer ${localStorage.getItem('access_token')}`
   }
-});
+})
 ```
 
-## OAuth Providers
+```javascript After (SDK)
+// Automatic token management
+const { data, error } = await insforge.auth.signInWithPassword({
+  email,
+  password
+})
 
-Set environment variables to enable social login:
-
-```env
-GOOGLE_CLIENT_ID=your-client-id
-GOOGLE_CLIENT_SECRET=your-client-secret
-GOOGLE_REDIRECT_URI=your-redirect-uri
-
-GITHUB_CLIENT_ID=your-client-id
-GITHUB_CLIENT_SECRET=your-client-secret
-GITHUB_REDIRECT_URI=your-redirect-uri
+// Automatic authentication
+const { data: posts } = await insforge.database
+  .from('posts')
+  .select()
 ```
+</CodeGroup>
 
-Then use:
-- `/api/auth/oauth/google` - Get Google auth URL
-- `/api/auth/oauth/github` - Get GitHub auth URL
-- `/api/auth/oauth/:provider/callback` - OAuth callback handler
-
-## Key Concepts
-
-**JWT Tokens** - Access tokens are JWTs with user information encoded.
-
-**Current User Response** - `/api/auth/sessions/current` returns `{user: {...}}` - note the nested structure.
-
-**Protected by Default** - All database operations require authentication.
-
-**Automatic Security** - Password hashing, CSRF protection, rate limiting built-in.
-
-## Common Patterns
-
-```javascript
-// Simple auth hook
-function useAuth() {
-  const [user, setUser] = useState(null);
-  
-  const login = async (email, password) => {
-    const res = await fetch('/api/auth/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    
-    const { accessToken, user } = await res.json();
-    localStorage.setItem('access_token', accessToken);
-    localStorage.setItem('user_id', user.id);
-    setUser(user);
-  };
-  
-  const logout = () => {
-    localStorage.clear();
-    setUser(null);
-  };
-  
-  return { user, login, logout };
-}
-```
-
-## Next Steps
-
-- [MCP Integration](/core-concepts/authentication/mcp) - How AI assistants handle auth
+The SDK handles all token storage, renewal, and header management automatically.

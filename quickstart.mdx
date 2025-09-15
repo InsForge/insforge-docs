@@ -3,68 +3,113 @@ title: "Quickstart"
 description: "Get Insforge running in 5 minutes"
 ---
 
-## Prerequisites
+Choose your deployment method:
 
-Before you begin, make sure you have:
-- Docker installed on your machine
-- Node.js (for AI agent integrations)
-- An AI coding assistant (Cursor, Claude, or similar)
-
-## Get started in three steps
-
-### Step 1: Run Insforge locally
-
-```bash
-# Clone the repository
-git clone https://github.com/insforge/insforge.git
-cd insforge
-
-# Set up environment
-cp .env.example .env
-
-# Start the backend
-docker compose up
-```
-
-Your backend is now running:
-- **API**: http://localhost:7130
-- **Dashboard**: http://localhost:7131
-
-<Note>
-  The first run will take a few minutes to download images and initialize the database.
-</Note>
-
-### Step 2: Connect your AI agent
-
-<Card title="Go to Dashboard" icon="desktop" href="http://localhost:7131">
-  **The dashboard provides one-click setup for all AI tools:**
-  - Tab for each tool (Cursor, Claude Code, Windsurf, Cline, Roo Code)
-  - "Add to [Tool]" button for instant setup
-  - Copy-paste commands with your API key included
-  - MCP JSON tab for manual configuration
-  
-  **Visit http://localhost:7131 →**
-</Card>
-
-<AccordionGroup>
-  <Accordion icon="sparkles" title="Quick Setup Guide">
-    1. **Open the dashboard** at http://localhost:7131
-    2. **Select your AI tool** from the tabs
-    3. **Click "Add to [Tool]"** button or copy the command
-    4. **Test connection** with: "InsForge is my backend, what tables do I have?"
+<Tabs>
+  <Tab title="Cloud Platform">
+    ## Get started in three steps (Cloud)
     
-    The dashboard provides the exact command with your API key:
+    ### Step 1: Create your project
+    
+    <Card title="Go to Insforge Cloud" icon="cloud" href="https://insforge.dev">
+      Visit [insforge.dev](https://insforge.dev) and create a free account
+    </Card>
+    
+    Once logged in:
+    1. Click **"Create New Project"**
+    2. Your backend will be ready in ~3 seconds
+    
+    You'll get:
+    - **API URL**: `https://your-app.us-east.insforge.app`
+    - **Dashboard**: Project management dashboard
+    - **Database**: PostgreSQL with automatic REST APIs
+    - **Storage**: File upload and management
+    - **AI Integration**: Built-in AI capabilities
+    
+    ### Step 2: Connect your AI agent
+    
+    <img src="/images/dashboard-connect.png" alt="Insforge Dashboard Connect" />
+    
+    In your project dashboard:
+    1. Click the **Connect** button
+    2. Select your AI tool (Cursor, Claude, Windsurf, etc.)
+    3. Copy the installation command - it includes your API key and URL automatically:
+    
     ```bash
     npx @insforge/install --client cursor \
-      --env API_KEY=your-actual-key-here \
-      --env API_BASE_URL=http://localhost:7130
+      --env API_KEY=ik_d02a35cfd8056c18e9e59b34bf8bf773 \
+      --env API_BASE_URL=https://your-app.us-east.insforge.app
     ```
-  </Accordion>
-</AccordionGroup>
-
-<Note>
-  **Need detailed instructions?** See the [AI Tools Setup](/setup-integration/ai-tools) guide for manual configuration and troubleshooting.
-</Note>
+    
+    4. Run the command in your terminal
+    5. Test with: "InsForge is my backend, what tables do I have?"
+    
+    <Note>
+      Cloud platform includes automatic backups, scaling, and zero maintenance.
+    </Note>
+  </Tab>
+  
+  <Tab title="Local Development">
+    ## Prerequisites
+    
+    Before you begin, make sure you have:
+    - Docker installed on your machine
+    - Node.js (for AI agent integrations)
+    - An AI coding assistant (Cursor, Claude, or similar)
+    
+    ## Get started in three steps (Local)
+    
+    ### Step 1: Run Insforge locally
+    
+    ```bash
+    # Clone the repository
+    git clone https://github.com/insforge/insforge.git
+    cd insforge
+    
+    # Set up environment
+    cp .env.example .env
+    
+    # Start the backend
+    docker compose up
+    ```
+    
+    Your backend is now running:
+    - **API**: http://localhost:7130
+    - **Dashboard**: http://localhost:7131
+    
+    <Note>
+      The first run will take a few minutes to download images and initialize the database.
+    </Note>
+    
+    ### Step 2: Connect your AI agent
+    
+    <Card title="Go to Dashboard" icon="desktop" href="http://localhost:7131">
+      **The dashboard provides one-click setup for all AI tools:**
+      - Tab for each tool (Cursor, Claude Code, Windsurf, Cline, Roo Code)
+      - "Add to [Tool]" button for instant setup
+      - Copy-paste commands with your API key included
+      - MCP JSON tab for manual configuration
+      
+      **Visit http://localhost:7131 →**
+    </Card>
+    
+    <AccordionGroup>
+      <Accordion icon="sparkles" title="Quick Setup Guide">
+        1. **Open the dashboard** at http://localhost:7131
+        2. **Select your AI tool** from the tabs
+        3. **Click "Add to [Tool]"** button or copy the command
+        4. **Test connection** with: "InsForge is my backend, what tables do I have?"
+        
+        The dashboard provides the exact command with your API key:
+        ```bash
+        npx @insforge/install --client cursor \
+          --env API_KEY=your-actual-key-here \
+          --env API_BASE_URL=http://localhost:7130
+        ```
+      </Accordion>
+    </AccordionGroup>
+  </Tab>
+</Tabs>
 
 ### Step 3: Build your first app
 

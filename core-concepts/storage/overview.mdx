@@ -1,34 +1,318 @@
 ---
-title: Storage Overview
+title: SDK
 description: File uploads and management with bucket-based storage
 ---
 
-InsForge provides bucket-based file storage. Like S3, but simpler.
+InsForge SDK provides simple, bucket-based file storage with automatic URL generation and authentication handling.
 
-## How It Works
+<CodeGroup>
+```bash npm
+npm install @insforge/sdk
+```
 
-Buckets → Files → URLs
+```bash yarn
+yarn add @insforge/sdk
+```
 
-1. Create bucket (public or private)
-2. Upload files to bucket
-3. Get URL for access
-4. Files served directly or with auth
-
-## Buckets
-
-Containers for files with access policies:
-
-- **Public** - Anyone can download (images, assets)
-- **Private** - Requires authentication (documents, reports)
-
-Only admins create buckets. Users upload to existing buckets.
-
-## Uploading Files
+```bash pnpm
+pnpm add @insforge/sdk
+```
+</CodeGroup>
 
 ```javascript
-// Upload with FormData
+import { createClient } from '@insforge/sdk';
+
+const insforge = createClient({
+  baseUrl: 'https://your-app.us-east.insforge.app'
+});
+```
+
+## Basic File Operations
+
+### Upload a File
+
+<CodeGroup>
+```javascript With Specific Path
+// Upload to specific path in bucket
+const file = fileInput.files[0];
+const { data, error } = await insforge.storage
+  .from('avatars')
+  .upload('user-123/avatar.jpg', file)
+
+// Returns: { bucket, key, size, mimeType, uploadedAt, url }
+console.log('File URL:', data.url)
+```
+
+```javascript Auto-Generated Name
+// Let the server generate a unique filename
+const file = fileInput.files[0];
+const { data, error } = await insforge.storage
+  .from('avatars')
+  .uploadAuto(file)
+
+// Prevents overwriting existing files
+```
+</CodeGroup>
+
+### Download a File
+
+```javascript
+// Download file as Blob
+const { data: blob, error } = await insforge.storage
+  .from('avatars')
+  .download('user-123/avatar.jpg')
+
+// Create download link
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url;
+a.download = 'avatar.jpg';
+a.click();
+```
+
+### List Files
+
+```javascript
+// List files in a bucket
+const { data, error } = await insforge.storage
+  .from('avatars')
+  .list({
+    prefix: 'user-123/',  // Optional: filter by prefix
+    limit: 10             // Optional: limit results
+  })
+
+console.log(data.objects)
+// [{ key, size, lastModified, etag, contentType }, ...]
+```
+
+### Delete Files
+
+```javascript
+// Delete a single file
+const { error } = await insforge.storage
+  .from('avatars')
+  .remove(['user-123/avatar.jpg'])
+
+// Delete multiple files
+const { error } = await insforge.storage
+  .from('avatars')
+  .remove([
+    'user-123/avatar.jpg',
+    'user-123/cover.jpg'
+  ])
+```
+
+## Working with Buckets
+
+Buckets are containers for files with access policies:
+
+- **Public Buckets** - Files accessible without authentication
+- **Private Buckets** - Files require authentication token
+
+<Note>
+Bucket creation is admin-only. Regular users upload to existing buckets.
+</Note>
+
+### Public File Access
+
+```javascript
+// Upload to public bucket
+const { data, error } = await insforge.storage
+  .from('public-assets')
+  .upload('logo.png', file)
+
+// Direct URL access (no auth needed)
+const imageUrl = `https://your-app.us-east.insforge.app${data.url}`;
+```
+
+### Private File Access
+
+```javascript
+// Upload to private bucket
+const { data, error } = await insforge.storage
+  .from('documents')
+  .upload('report.pdf', file)
+
+// SDK handles auth automatically when downloading
+const { data: blob, error } = await insforge.storage
+  .from('documents')
+  .download('report.pdf')
+```
+
+## Image Upload Example
+
+Complete example for avatar upload with preview:
+
+```javascript
+async function handleAvatarUpload(fileInput) {
+  const file = fileInput.files[0];
+  
+  // Show preview
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('preview').src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  
+  // Upload file
+  const { data, error } = await insforge.storage
+    .from('avatars')
+    .uploadAuto(file)
+  
+  if (error) {
+    console.error('Upload failed:', error);
+    return;
+  }
+  
+  // Update user profile with new avatar URL
+  const { error: updateError } = await insforge.auth.setProfile({
+    avatar_url: data.url
+  })
+  
+  if (!updateError) {
+    console.log('Avatar updated successfully!');
+  }
+}
+```
+
+## File Upload Progress
+
+Track upload progress for large files:
+
+```javascript
+// Note: Progress tracking requires custom implementation
+const uploadWithProgress = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const xhr = new XMLHttpRequest();
+  
+  // Track progress
+  xhr.upload.addEventListener('progress', (e) => {
+    if (e.lengthComputable) {
+      const percentComplete = (e.loaded / e.total) * 100;
+      console.log(`Upload: ${percentComplete.toFixed(2)}%`);
+    }
+  });
+  
+  // Handle completion
+  return new Promise((resolve, reject) => {
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        resolve(JSON.parse(xhr.responseText));
+      } else {
+        reject(new Error('Upload failed'));
+      }
+    };
+    
+    xhr.open('POST', 'https://your-app.us-east.insforge.app/api/storage/buckets/uploads/objects');
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.send(formData);
+  });
+};
+```
+
+## React Component Example
+
+```jsx
+import { useState } from 'react';
+import { createClient } from '@insforge/sdk';
+
+const insforge = createClient({
+  baseUrl: 'https://your-app.us-east.insforge.app'
+});
+
+function FileUploader({ bucket, onUpload }) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    setUploading(true);
+    setError(null);
+    
+    const { data, error } = await insforge.storage
+      .from(bucket)
+      .uploadAuto(file);
+    
+    if (error) {
+      setError(error.message);
+    } else {
+      onUpload(data);
+    }
+    
+    setUploading(false);
+  };
+  
+  return (
+    <div>
+      <input
+        type="file"
+        onChange={handleFileChange}
+        disabled={uploading}
+      />
+      {uploading && <p>Uploading...</p>}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+    </div>
+  );
+}
+```
+
+## Storage Patterns
+
+<CardGroup cols={2}>
+  <Card title="User Avatars" icon="user-circle">
+    Store in `avatars` bucket with user ID prefix
+  </Card>
+  
+  <Card title="Product Images" icon="image">
+    Public bucket for catalog images
+  </Card>
+  
+  <Card title="Documents" icon="file-pdf">
+    Private bucket with access control
+  </Card>
+  
+  <Card title="Temp Files" icon="clock">
+    Auto-cleanup with lifecycle rules
+  </Card>
+</CardGroup>
+
+## Error Handling
+
+Storage operations return structured errors:
+
+```javascript
+const { data, error } = await insforge.storage
+  .from('avatars')
+  .upload('test.jpg', file)
+
+if (error) {
+  switch (error.statusCode) {
+    case 413:
+      console.error('File too large');
+      break;
+    case 415:
+      console.error('File type not supported');
+      break;
+    case 401:
+      console.error('Not authenticated');
+      break;
+    default:
+      console.error('Upload failed:', error.message);
+  }
+}
+```
+
+## Migration from REST API
+
+<CodeGroup>
+```javascript Before (REST API)
+// Manual FormData and headers
 const formData = new FormData();
-formData.append('file', fileInput.files[0]);
+formData.append('file', file);
 
 fetch('/api/storage/buckets/avatars/objects', {
   method: 'POST',
@@ -36,80 +320,24 @@ fetch('/api/storage/buckets/avatars/objects', {
     'Authorization': `Bearer ${token}`
   },
   body: formData
-});
-
-// Response
-{
-  url: "/api/storage/buckets/avatars/objects/file-123.jpg",
-  size: 102400,
-  contentType: "image/jpeg"
-}
+})
 ```
 
-## File URLs
-
-Predictable URL pattern:
+```javascript After (SDK)
+// Simple SDK method
+const { data, error } = await insforge.storage
+  .from('avatars')
+  .uploadAuto(file)
 ```
-/api/storage/buckets/{bucket}/objects/{filename}
-```
+</CodeGroup>
 
-- Public buckets: No auth required
-- Private buckets: Include Authorization header
+## Best Practices
 
-## Automatic Naming
+1. **Use `uploadAuto()`** for automatic unique filenames
+2. **Organize with prefixes** like `user-{id}/` for better structure
+3. **Validate file types** before uploading
+4. **Set size limits** appropriate for your use case
+5. **Use public buckets** for assets, private for sensitive files
+6. **Clean up unused files** to manage storage costs
 
-Files get unique names to prevent overwrites:
-- Upload: `resume.pdf`
-- Stored as: `resume-1704067200-xyz789.pdf`
-- User still sees: `resume.pdf`
-
-## Key Concepts
-
-**No Direct CDN** - InsForge handles uploads. Add CloudFlare for CDN.
-
-**FormData Required** - Files must use multipart/form-data.
-
-**Bucket Creation** - Admin only via MCP tools.
-
-**Local or S3** - Same API works with local disk or S3 storage.
-
-## Common Patterns
-
-```javascript
-// Image upload with preview
-async function uploadAvatar(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-  
-  const res = await fetch('/api/storage/buckets/avatars/objects', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` },
-    body: formData
-  });
-  
-  const { url } = await res.json();
-  
-  // Save URL to user profile
-  await fetch('/api/database/records/profiles', {
-    method: 'PATCH',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ avatar_url: url })
-  });
-  
-  return url;
-}
-```
-
-## Storage Backends
-
-- **Local** - Files on disk (development, small apps)
-- **S3** - AWS or compatible (production, scale)
-
-Switch backends without code changes.
-
-## Next Steps
-
-- [MCP Integration](/core-concepts/storage/mcp) - How AI assistants handle files
+The SDK handles authentication, URL construction, and error handling automatically.

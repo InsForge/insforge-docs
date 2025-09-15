@@ -47,7 +47,7 @@ graph TB
 | **Chat Service** | Node.js + SSE | Handle chat completions with streaming |
 | **Image Service** | Async processing | Generate images via AI models |
 | **Configuration** | PostgreSQL | Store system prompts per project |
-| **Usage Tracking** | PostgreSQL | Monitor tokens and costs |
+| **Usage Tracking** | PostgreSQL | Monitor token usage |
 | **Response Format** | JSON/SSE | Standard and streaming responses |
 
 ## OpenRouter Integration
@@ -58,7 +58,6 @@ graph TB
 - **Unified Billing**: Consistent pricing across models
 - **Automatic Failover**: Fallback to alternative models
 - **Rate Limiting**: Built-in rate limit handling
-- **Cost Tracking**: Usage monitoring and analytics
 
 ### Request Flow
 
@@ -85,17 +84,19 @@ sequenceDiagram
 
 | Provider | Model | ID | Best For |
 |----------|-------|----|---------| 
-| **Anthropic** | Claude 3.5 Sonnet | `anthropic/claude-3.5-sonnet-20241022` | Complex reasoning |
-| **Anthropic** | Claude 3.5 Haiku | `anthropic/claude-3-5-haiku-20241022` | Fast responses |
-| **Anthropic** | Claude 3 Opus | `anthropic/claude-3-opus-20240229` | Highest quality |
+| **Anthropic** | Claude Sonnet 4 | `anthropic/claude-sonnet-4` | Complex reasoning |
+| **Anthropic** | Claude 3.5 Haiku | `anthropic/claude-3.5-haiku` | Fast responses |
+| **Anthropic** | Claude Opus 4.1 | `anthropic/claude-opus-4.1` | Highest quality |
+| **OpenAI** | GPT-5 | `openai/gpt-5` | Most advanced |
+| **OpenAI** | GPT-5 Mini | `openai/gpt-5-mini` | Fast & efficient |
 | **OpenAI** | GPT-4o | `openai/gpt-4o` | General purpose |
-| **OpenAI** | GPT-4o Mini | `openai/gpt-4o-mini` | Cost-effective |
+| **Google** | Gemini 2.5 Pro | `google/gemini-2.5-pro` | Advanced reasoning |
 
 ### Image Models
 
 | Provider | Model | ID | Capabilities |
 |----------|-------|----|--------------| 
-| **Google** | Gemini 2.0 Flash | `google/gemini-2.0-flash-thinking-exp-01-21` | Text-to-image generation |
+| **Google** | Gemini 2.5 Flash Image | `google/gemini-2.5-flash-image-preview` | Text-to-image generation |
 
 ## Chat Completions
 
@@ -107,7 +108,7 @@ sequenceDiagram
 4. **Model Selection**: Use specified or default model
 5. **OpenRouter Call**: Forward to OpenRouter
 6. **Response Handling**: Stream or batch response
-7. **Usage Tracking**: Record tokens and costs
+7. **Usage Tracking**: Record token usage
 
 ### Streaming Architecture
 
@@ -138,7 +139,7 @@ async function* streamChat(messages, options) {
 ```json
 {
   "response": "AI generated response text",
-  "model": "anthropic/claude-3-5-haiku-20241022",
+  "model": "anthropic/claude-3.5-haiku",
   "usage": {
     "promptTokens": 150,
     "completionTokens": 200,
@@ -180,18 +181,17 @@ data: {"done": true, "tokenUsage": {...}}
 
 ## Configuration Management
 
-### Project-Level Settings
+### Database Schema
 
 ```sql
-CREATE TABLE ai_configurations (
-  id UUID PRIMARY KEY,
-  project_id UUID REFERENCES projects(id),
-  model TEXT DEFAULT 'anthropic/claude-3-5-haiku-20241022',
+CREATE TABLE _ai_configs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  modality VARCHAR(255) NOT NULL,     -- 'text' or 'image'
+  provider VARCHAR(255) NOT NULL,      -- 'openrouter'
+  model_id VARCHAR(255) UNIQUE NOT NULL,
   system_prompt TEXT,
-  temperature FLOAT DEFAULT 0.7,
-  max_tokens INTEGER DEFAULT 1000,
-  created_at TIMESTAMPTZ,
-  updated_at TIMESTAMPTZ
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
 
@@ -207,37 +207,16 @@ CREATE TABLE ai_configurations (
 ### Metrics Collected
 
 ```sql
-CREATE TABLE ai_usage (
-  id UUID PRIMARY KEY,
-  project_id UUID,
-  user_id UUID,
-  model TEXT,
-  operation TEXT, -- 'chat' or 'image'
-  prompt_tokens INTEGER,
-  completion_tokens INTEGER,
-  total_tokens INTEGER,
-  cost_cents INTEGER,
-  created_at TIMESTAMPTZ
+CREATE TABLE _ai_usage (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  config_id UUID NOT NULL,
+  input_tokens INT,
+  output_tokens INT,
+  image_count INT,
+  image_resolution TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  FOREIGN KEY (config_id) REFERENCES _ai_configs(id) ON DELETE NO ACTION
 );
-```
-
-### Cost Calculation
-
-```javascript
-// OpenRouter pricing per 1M tokens
-const pricing = {
-  'anthropic/claude-3-5-sonnet': { input: 3.00, output: 15.00 },
-  'anthropic/claude-3-5-haiku': { input: 0.25, output: 1.25 },
-  'openai/gpt-4o': { input: 5.00, output: 15.00 },
-  'openai/gpt-4o-mini': { input: 0.15, output: 0.60 }
-};
-
-function calculateCost(model, promptTokens, completionTokens) {
-  const rates = pricing[model];
-  const inputCost = (promptTokens / 1_000_000) * rates.input;
-  const outputCost = (completionTokens / 1_000_000) * rates.output;
-  return Math.ceil((inputCost + outputCost) * 100); // cents
-}
 ```
 
 ## Security & Rate Limiting
@@ -256,7 +235,7 @@ function calculateCost(model, promptTokens, completionTokens) {
   </Card>
   
   <Card title="Usage Quotas" icon="chart-pie">
-    Configurable token/cost limits
+    Configurable token limits
   </Card>
   
   <Card title="Content Filtering" icon="filter">
@@ -314,15 +293,44 @@ async function retryableRequest(fn, maxRetries = 3) {
 - **Batch Processing**: Multiple requests in parallel (coming soon)
 - **Embeddings Cache**: Store computed embeddings (coming soon)
 
+## API Endpoints
+
+### Chat Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/ai/chat/completion` | User | Send chat messages, supports streaming |
+
+### Image Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/ai/image/generation` | User | Generate images from text prompts |
+
+### Configuration Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/ai/models` | Admin | List available models |
+| GET | `/api/ai/configurations` | Admin | List AI configurations |
+| POST | `/api/ai/configurations` | Admin | Create AI configuration |
+| PATCH | `/api/ai/configurations/:id` | Admin | Update AI configuration |
+| DELETE | `/api/ai/configurations/:id` | Admin | Delete AI configuration |
+
+### Usage Tracking Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/ai/usage` | Admin | Get usage records with pagination |
+| GET | `/api/ai/usage/summary` | Admin | Get usage summary statistics |
+| GET | `/api/ai/usage/config/:configId` | Admin | Get usage by configuration |
+
 ## Environment Variables
 
 | Variable | Description | Required |
 |----------|-------------|----------|
-| `OPENROUTER_API_KEY` | OpenRouter API key | Yes |
-| `AI_DEFAULT_MODEL` | Default chat model | No |
-| `AI_MAX_TOKENS` | Global token limit | No |
-| `AI_TEMPERATURE` | Default temperature | No |
-| `AI_RATE_LIMIT` | Requests per minute | No |
+| `OPENROUTER_API_KEY` | OpenRouter API key (local dev only) | Yes (local) |
+
+**Note**: 
+- In cloud environments, the API key is fetched dynamically from the cloud API
+- Model configuration is stored in the database (`_ai_configs` table)
+- No other AI-related environment variables are used
 
 ## Best Practices
 
@@ -336,7 +344,7 @@ async function retryableRequest(fn, maxRetries = 3) {
   </Card>
   
   <Card title="Token Management" icon="coins">
-    Monitor usage to control costs
+    Monitor token usage
   </Card>
   
   <Card title="Streaming UX" icon="stream">
@@ -360,5 +368,4 @@ async function retryableRequest(fn, maxRetries = 3) {
 | **Billing** | Unified through OpenRouter | Separate per provider |
 | **Model Access** | 100+ models | Limited to one provider |
 | **Failover** | Automatic | Manual implementation |
-| **Cost Tracking** | Built-in analytics | Custom implementation |
 | **Rate Limiting** | Handled by OpenRouter | Per-provider limits |

@@ -198,18 +198,16 @@ GET /api/database/records/orders?and=(status.eq.pending,or=(priority.eq.high,cre
 
 PostgreSQL types are automatically mapped to JSON:
 
-| PostgreSQL Type | JSON Type | Notes |
-|----------------|-----------|-------|
-| `TEXT`, `VARCHAR` | string | All strings use TEXT internally |
-| `INTEGER` | number | 32-bit integers |
-| `BIGINT` | string | Large integers as strings to prevent overflow |
-| `DOUBLE PRECISION` | number | Floating point |
-| `BOOLEAN` | boolean | true/false |
-| `DATE` | string | ISO 8601 date format |
-| `TIMESTAMPTZ` | string | ISO 8601 with timezone |
-| `UUID` | string | Standard UUID format |
-| `JSONB` | object/array | Native JSON storage |
-| `ARRAY` | array | PostgreSQL arrays |
+| InsForge Type | PostgreSQL Type | JSON Type | Notes |
+|---------------|----------------|-----------|-------|
+| `string` | `TEXT` | string | Text of any length |
+| `integer` | `INTEGER` | number | 32-bit integers |
+| `float` | `DOUBLE PRECISION` | number | Decimal numbers |
+| `boolean` | `BOOLEAN` | boolean | true/false |
+| `date` | `DATE` | string | ISO 8601 date format |
+| `datetime` | `TIMESTAMPTZ` | string | ISO 8601 with timezone |
+| `uuid` | `UUID` | string | Auto-generated unique identifier |
+| `json` | `JSONB` | object/array | Structured JSON data with indexing |
 
 ## Best Practices
 

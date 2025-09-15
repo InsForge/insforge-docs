@@ -7,6 +7,8 @@ paths:
   /api/database/tables:
     get:
       summary: List Tables
+      tags:
+        - Admin
       security:
         - bearerAuth: []
         - apiKey: []
@@ -27,6 +29,8 @@ paths:
 
     post:
       summary: Create Table
+      tags:
+        - Admin
       security:
         - bearerAuth: []
         - apiKey: []
@@ -114,6 +118,8 @@ paths:
   /api/database/tables/{tableName}:
     get:
       summary: Get Table Schema
+      tags:
+        - Admin
       security:
         - bearerAuth: []
         - apiKey: []
@@ -201,6 +207,8 @@ paths:
                 nextActions: "Check table name and try again"
     patch:
       summary: Update Table Schema
+      tags:
+        - Admin
       security:
         - bearerAuth: []
         - apiKey: []
@@ -386,6 +394,8 @@ paths:
                 nextActions: "Check table name and try again"
     delete:
       summary: Delete Table
+      tags:
+        - Admin
       security:
         - bearerAuth: []
         - apiKey: []

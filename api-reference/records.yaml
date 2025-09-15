@@ -9,6 +9,8 @@ paths:
     get:
       summary: Query Records
       description: Query records from a table with filtering, sorting, and pagination
+      tags:
+        - Client
       security:
         - bearerAuth: []
         - apiKey: []
@@ -110,6 +112,8 @@ paths:
     post:
       summary: Create Records
       description: Create one or more records. Request body MUST be an array.
+      tags:
+        - Client
       security:
         - bearerAuth: []
         - apiKey: []
@@ -190,6 +194,8 @@ paths:
     patch:
       summary: Update Records
       description: Update records matching query filters
+      tags:
+        - Client
       security:
         - bearerAuth: []
         - apiKey: []
@@ -269,6 +275,8 @@ paths:
     delete:
       summary: Delete Records
       description: Delete records matching query filters
+      tags:
+        - Client
       security:
         - bearerAuth: []
         - apiKey: []

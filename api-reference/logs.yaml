@@ -7,6 +7,8 @@ paths:
   /api/logs:
     get:
       summary: List activity logs
+      tags:
+        - Admin
       security:
         - bearerAuth: []
       parameters:
@@ -98,6 +100,8 @@ paths:
 
     delete:
       summary: Clear logs
+      tags:
+        - Admin
       security:
         - bearerAuth: []
       parameters:
@@ -136,6 +140,8 @@ paths:
   /api/logs/stats:
     get:
       summary: Get logs statistics
+      tags:
+        - Admin
       security:
         - bearerAuth: []
       responses:

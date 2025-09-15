@@ -8,6 +8,8 @@ paths:
   /api/storage/buckets:
     get:
       summary: List All Buckets
+      tags:
+        - Admin
       security:
         - apiKey: []
       responses:
@@ -28,6 +30,8 @@ paths:
 
     post:
       summary: Create New Bucket
+      tags:
+        - Admin
       security:
         - apiKey: []
       requestBody:
@@ -92,6 +96,8 @@ paths:
   /api/storage/buckets/{bucketName}:
     patch:
       summary: Update Bucket
+      tags:
+        - Admin
       security:
         - apiKey: []
       parameters:
@@ -151,6 +157,8 @@ paths:
   /api/storage/buckets/{bucketName}/objects:
     get:
       summary: List Objects in Bucket
+      tags:
+        - Admin
       security:
         - apiKey: []
       parameters:
@@ -232,6 +240,8 @@ paths:
 
     delete:
       summary: Delete Bucket
+      tags:
+        - Admin
       security:
         - apiKey: []
       parameters:
@@ -268,6 +278,8 @@ paths:
     
     post:
       summary: Upload Object with Auto-Generated Key
+      tags:
+        - Client
       security:
         - apiKey: []
       parameters:
@@ -332,6 +344,8 @@ paths:
     post:
       summary: Get Upload Strategy (Direct or Presigned URL)
       description: Returns upload strategy based on storage backend (S3 returns presigned URLs, local returns direct upload endpoints)
+      tags:
+        - Client
       security:
         - apiKey: []
       parameters:
@@ -405,6 +419,8 @@ paths:
   /api/storage/buckets/{bucketName}/objects/{objectKey}:
     put:
       summary: Upload Object
+      tags:
+        - Client
       security:
         - apiKey: []
       parameters:
@@ -474,6 +490,8 @@ paths:
 
     get:
       summary: Download Object
+      tags:
+        - Client
       security:
         - apiKey: []
       parameters:
@@ -521,6 +539,8 @@ paths:
 
     delete:
       summary: Delete Object
+      tags:
+        - Client
       security:
         - apiKey: []
       parameters:
@@ -565,6 +585,8 @@ paths:
     post:
       summary: Confirm Presigned Upload
       description: Confirms that a file was successfully uploaded to S3 using presigned URL
+      tags:
+        - Client
       security:
         - apiKey: []
       parameters:
@@ -638,6 +660,8 @@ paths:
         - S3 with public bucket: Direct URLs (no presigning, better performance)
         - S3 with private bucket: Presigned URLs with expiration
         - Local storage: Always direct endpoints
+      tags:
+        - Client
       security:
         - apiKey: []
       parameters:

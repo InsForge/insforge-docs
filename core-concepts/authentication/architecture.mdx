@@ -70,7 +70,7 @@ sequenceDiagram
     SDK->>API: POST /api/auth/users or /sessions
     API->>DB: Verify credentials
     DB-->>API: User data
-    API->>JWT: Generate token (RS256)
+    API->>JWT: Generate token (HS256)
     JWT-->>API: Signed JWT
     API-->>SDK: {user, accessToken}
     SDK-->>Client: Authenticated
@@ -130,20 +130,20 @@ sequenceDiagram
 ## Security Features
 
 <CardGroup cols={2}>
-  <Card title="RSA Signing" icon="signature">
-    Tokens signed with 2048-bit RSA private key, verified with public key
+  <Card title="HS256 Signing" icon="signature">
+    Tokens signed with HMAC-SHA256 using shared secret key
   </Card>
   
   <Card title="bcrypt Hashing" icon="lock">
-    Passwords hashed with bcrypt using 12 salt rounds
+    Passwords hashed with bcryptjs using 10 salt rounds
   </Card>
   
   <Card title="OAuth State" icon="shield-check">
     CSRF protection via state parameter in OAuth flows
   </Card>
   
-  <Card title="Secure Sessions" icon="clock">
-    Database-backed sessions with automatic expiry
+  <Card title="Stateless Auth" icon="clock">
+    JWT tokens with built-in expiry, no server-side sessions
   </Card>
   
   <Card title="Token Rotation" icon="arrows-rotate">

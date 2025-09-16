@@ -155,44 +155,6 @@ sequenceDiagram
   </Card>
 </CardGroup>
 
-## Database Schema
-
-### _accounts Table (Core Authentication)
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Primary key, user ID |
-| `email` | TEXT | Unique email address |
-| `email_verified` | BOOLEAN | Email verification status |
-| `name` | TEXT | User's full name |
-| `image` | TEXT | Profile image URL |
-| `created_at` | TIMESTAMPTZ | Account creation time |
-| `updated_at` | TIMESTAMPTZ | Last update time |
-
-### users Table (User Profiles)
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Foreign key to _accounts(id) |
-| `nickname` | TEXT | Display name/username |
-| `avatar_url` | TEXT | Profile picture URL |
-| `bio` | TEXT | User biography |
-| `birthday` | DATE | User's birthday |
-| `created_at` | TIMESTAMPTZ | Profile creation time |
-| `updated_at` | TIMESTAMPTZ | Last profile update |
-
-### _oauth_connections Table
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID | Connection ID |
-| `user_id` | UUID | Foreign key to _accounts |
-| `provider` | TEXT | OAuth provider (google, github) |
-| `provider_account_id` | TEXT | Provider's user ID |
-| `access_token` | TEXT | OAuth access token |
-| `refresh_token` | TEXT | OAuth refresh token |
-| `expires_at` | TIMESTAMPTZ | Token expiry |
-
 ## API Endpoints
 
 ### Authentication Endpoints
@@ -313,13 +275,3 @@ async function validateToken(token) {
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth secret | Secret string |
 | `TOKEN_EXPIRY` | Token lifetime | 7d, 24h, 3600 |
 
-## Comparison with Other Auth Systems
-
-| Feature | InsForge | Firebase Auth | Auth0 | Supabase |
-|---------|----------|--------------|-------|----------|
-| **JWT Tokens** | ✅ RS256 | ✅ RS256 | ✅ Multiple | ✅ HS256 |
-| **OAuth Providers** | Google, GitHub | 20+ providers | 50+ providers | 15+ providers |
-| **Session Storage** | ❌ Stateless | ❌ Stateless | ✅ Custom | ✅ PostgreSQL |
-| **Custom Claims** | ✅ | ✅ | ✅ | ✅ |
-| **Self-Hosted** | ✅ | ❌ | ❌ | ✅ |
-| **Open Source** | ✅ | ❌ | ❌ | ✅ |

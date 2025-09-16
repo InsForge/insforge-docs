@@ -47,90 +47,51 @@ Choose your deployment method:
     <Note>
       Cloud platform includes automatic backups, scaling, and zero maintenance.
     </Note>
+    
+    ### Step 3: Build your first app
+
+    Create a new directory for your app (not inside the insforge folder):
+
+    ```bash
+    mkdir my-app
+    cd my-app
+    ```
+
+    Now tell your AI assistant to build something:
+
+    ```
+    "Build a todo app with user authentication using Insforge as the backend"
+    ```
+
+    Your AI will automatically:
+    - Create database tables
+    - Set up authentication
+    - Handle file uploads
+    - Generate a complete frontend
   </Tab>
   
   <Tab title="Local Development">
-    ## Prerequisites
+    ## Run Insforge locally
     
-    Before you begin, make sure you have:
-    - Docker installed on your machine
-    - Node.js (for AI agent integrations)
-    - An AI coding assistant (Cursor, Claude, or similar)
+    For local development and self-hosting instructions, please visit the official OSS repository:
     
-    ## Get started in three steps (Local)
-    
-    ### Step 1: Run Insforge locally
-    
-    ```bash
-    # Clone the repository
-    git clone https://github.com/insforge/insforge.git
-    cd insforge
-    
-    # Set up environment
-    cp .env.example .env
-    
-    # Start the backend
-    docker compose up
-    ```
-    
-    Your backend is now running:
-    - **API**: http://localhost:7130
-    - **Dashboard**: http://localhost:7131
-    
-    <Note>
-      The first run will take a few minutes to download images and initialize the database.
-    </Note>
-    
-    ### Step 2: Connect your AI agent
-    
-    <Card title="Go to Dashboard" icon="desktop" href="http://localhost:7131">
-      **The dashboard provides one-click setup for all AI tools:**
-      - Tab for each tool (Cursor, Claude Code, Windsurf, Cline, Roo Code)
-      - "Add to [Tool]" button for instant setup
-      - Copy-paste commands with your API key included
-      - MCP JSON tab for manual configuration
+    <Card title="Insforge OSS Repository" icon="github" href="https://github.com/insforge/insforge">
+      **Complete local setup guide available at:**
       
-      **Visit http://localhost:7131 →**
+      https://github.com/insforge/insforge
+      
+      The repository includes:
+      - Docker setup instructions
+      - Environment configuration
+      - AI agent integration guides
+      - Troubleshooting tips
     </Card>
     
-    <AccordionGroup>
-      <Accordion icon="sparkles" title="Quick Setup Guide">
-        1. **Open the dashboard** at http://localhost:7131
-        2. **Select your AI tool** from the tabs
-        3. **Click "Add to [Tool]"** button or copy the command
-        4. **Test connection** with: "InsForge is my backend, what tables do I have?"
-        
-        The dashboard provides the exact command with your API key:
-        ```bash
-        npx @insforge/install --client cursor \
-          --env API_KEY=your-actual-key-here \
-          --env API_BASE_URL=http://localhost:7130
-        ```
-      </Accordion>
-    </AccordionGroup>
+    <Note>
+      Local development requires Docker and provides the same features as the cloud platform.
+    </Note>
   </Tab>
 </Tabs>
-
-### Step 3: Build your first app
-
-Create a new directory for your app (not inside the insforge folder):
-
-```bash
-mkdir my-app
-cd my-app
-```
-
-Now tell your AI assistant to build something:
-
-```
-"Build a todo app with user authentication using Insforge as the backend"
-```
-
-Your AI will automatically:
-- Create database tables
-- Set up authentication
-- Handle file uploads
-- Generate a complete frontend
 
 ## What you get
 

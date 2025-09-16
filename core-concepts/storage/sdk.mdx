@@ -306,30 +306,6 @@ if (error) {
 }
 ```
 
-## Migration from REST API
-
-<CodeGroup>
-```javascript Before (REST API)
-// Manual FormData and headers
-const formData = new FormData();
-formData.append('file', file);
-
-fetch('/api/storage/buckets/avatars/objects', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${token}`
-  },
-  body: formData
-})
-```
-
-```javascript After (SDK)
-// Simple SDK method
-const { data, error } = await insforge.storage
-  .from('avatars')
-  .uploadAuto(file)
-```
-</CodeGroup>
 
 ## Best Practices
 

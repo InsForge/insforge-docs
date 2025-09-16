@@ -1,11 +1,11 @@
 ---
 title: Architecture  
-description: Dual storage system with local filesystem and AWS S3
+description: Enterprise-grade storage system powered by AWS S3
 ---
 
 ## Overview
 
-InsForge provides a unified storage API that works with both local filesystem for development and AWS S3 for production, allowing seamless transition between environments.
+InsForge provides a high-performance, scalable storage system built on AWS S3, delivering enterprise-grade reliability with 99.999999999% (11 9's) durability.
 
 ## Technology Stack
 
@@ -14,102 +14,66 @@ graph TB
     Client[Client Application] --> SDK[InsForge SDK]
     SDK --> StorageAPI[Storage API]
     
-    StorageAPI --> Router[Storage Router]
-    Router --> LocalBackend[Local Storage]
-    Router --> S3Backend[S3 Storage]
-    
-    LocalBackend --> FS[(Filesystem)]
-    S3Backend --> AWS[AWS S3]
+    StorageAPI --> S3[AWS S3]
     
     StorageAPI --> DB[(PostgreSQL)]
-    DB --> Buckets[Buckets Table]
-    DB --> Objects[Objects Table]
     DB --> Metadata[File Metadata]
+    DB --> Buckets[Bucket Configuration]
+    
+    S3 --> DirectUpload[Presigned URLs]
+    S3 --> SecureAccess[IAM Policies]
     
     style Client fill:#1e293b,stroke:#475569,color:#e2e8f0
     style SDK fill:#1e40af,stroke:#3b82f6,color:#dbeafe
     style StorageAPI fill:#166534,stroke:#22c55e,color:#dcfce7
-    style Router fill:#c2410c,stroke:#fb923c,color:#fed7aa
-    style LocalBackend fill:#6b21a8,stroke:#a855f7,color:#f3e8ff
-    style S3Backend fill:#be185d,stroke:#ec4899,color:#fce7f3
+    style S3 fill:#ea580c,stroke:#f97316,color:#fed7aa
     style DB fill:#0e7490,stroke:#06b6d4,color:#cffafe
-    style FS fill:#4c1d95,stroke:#8b5cf6,color:#ede9fe
-    style AWS fill:#ea580c,stroke:#f97316,color:#fed7aa
-    style Buckets fill:#0e7490,stroke:#22d3ee,color:#cffafe
-    style Objects fill:#0e7490,stroke:#22d3ee,color:#cffafe
     style Metadata fill:#0e7490,stroke:#22d3ee,color:#cffafe
+    style Buckets fill:#0e7490,stroke:#22d3ee,color:#cffafe
+    style DirectUpload fill:#ea580c,stroke:#fb923c,color:#fed7aa
+    style SecureAccess fill:#ea580c,stroke:#fb923c,color:#fed7aa
 ```
 
 ## Core Components
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Local Backend** | Node.js fs | Development storage using filesystem |
-| **S3 Backend** | AWS SDK v3 | Production storage with AWS S3 |
+| **Storage Backend** | AWS S3 | Enterprise-grade object storage |
 | **Metadata Store** | PostgreSQL | File metadata, bucket configuration |
 | **Upload Handler** | Multer | Multipart form data parsing (both backends) |
 | **URL Strategy** | Presigned URLs | Secure direct uploads/downloads (S3 only) |
 | **Access Control** | JWT + Bucket visibility | Public/private bucket permissions |
 
-## Storage Backends
+## AWS S3 Architecture
 
-### Local Storage (Development)
+### Enterprise Features
 
-```javascript
-// Local storage structure
-/data/storage/
-├── bucket-1/
-│   ├── file1.jpg
-│   ├── folder/
-│   │   └── file2.pdf
-│   └── ...
-├── bucket-2/
-│   └── ...
-```
-
-**Features:**
-- Files stored on local filesystem
-- Direct file access via API
-- No external dependencies
-- Instant setup for development
-
-### AWS S3 Storage (Production)
-
-**Features:**
-- Presigned POST URLs for direct uploads
-- Presigned GET URLs for secure downloads
-- IAM role-based authentication on EC2
-- Multi-tenant isolation with app key prefix
-
-**Configuration:**
-- Uses IAM roles when deployed on EC2
-- No hardcoded credentials needed
-- Bucket per deployment with app key prefix
+- **Direct Uploads**: Presigned URLs bypass API server for unlimited scale
+- **IAM Security**: Role-based authentication without credential management
+- **Multi-Tenancy**: Secure isolation between projects using app key prefix
+- **Bucket Policies**: Public and private bucket configurations
+- **Automatic Cleanup**: Configurable lifecycle policies
+- **Metadata Tracking**: Rich file metadata stored in PostgreSQL
 
 ## Upload Strategies
 
-### Direct Upload (Both Local and S3)
+### Direct Upload to S3
 
 ```mermaid
 sequenceDiagram
     participant Client
     participant API
-    participant Multer
-    participant Backend
+    participant S3
     participant DB
     
     Client->>API: POST/PUT with multipart/form-data
-    API->>Multer: Parse form data into memory
-    Note over Multer: File stored in RAM (buffer)
-    Multer->>API: req.file with buffer
-    API->>Backend: putObject(bucket, key, file)
-    Note over Backend: Local: Write to disk<br/>S3: Upload to AWS
-    Backend-->>API: Success
+    API->>S3: Upload file
+    S3-->>API: Success
     API->>DB: Store metadata
     API-->>Client: {url, key, size}
 ```
 
-### Presigned URL Upload (S3)
+### Presigned URL Upload (Recommended)
 
 ```mermaid
 sequenceDiagram
@@ -137,16 +101,6 @@ sequenceDiagram
 | **Public** | No auth required for downloads | Public assets, images, static files |
 | **Private** | Auth required for all operations | User files, sensitive documents |
 
-### Bucket Metadata
-
-```sql
-CREATE TABLE _storage_buckets (
-  name TEXT PRIMARY KEY,
-  public BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
 
 ## File Operations
 
@@ -154,7 +108,7 @@ CREATE TABLE _storage_buckets (
 
 1. **Request Upload**: Client requests upload permission
 2. **Validation**: Check auth, bucket permissions, file size
-3. **Strategy Selection**: Choose direct or presigned based on backend
+3. **Strategy Selection**: Choose direct or presigned upload
 4. **Upload**: Client uploads via selected method
 5. **Confirmation**: Verify upload and store metadata
 6. **Response**: Return file URL and metadata
@@ -194,57 +148,41 @@ CREATE TABLE _storage_buckets (
   </Card>
 </CardGroup>
 
-## Database Schema
+## Intelligent Metadata Management
 
-### Storage Tables
+InsForge maintains optimized metadata in PostgreSQL for instant queries:
 
-```sql
--- Buckets table
-CREATE TABLE _storage_buckets (
-  name TEXT PRIMARY KEY,
-  public BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+- **Fast Search**: Indexed metadata for sub-millisecond lookups
+- **Rich Metadata**: MIME types, sizes, timestamps, custom tags
+- **Usage Analytics**: Track downloads, bandwidth, popular files
+- **Access Control**: Fine-grained permissions per file or bucket
 
--- Storage metadata table
-CREATE TABLE _storage (
-  bucket TEXT NOT NULL,
-  key TEXT NOT NULL,
-  size INTEGER NOT NULL,
-  mime_type TEXT,
-  uploaded_at TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (bucket, key),
-  FOREIGN KEY (bucket) REFERENCES _storage_buckets(name) ON DELETE CASCADE
-);
-```
+### Secure URL Generation
 
-### URL Formats
-
-| Backend | Format | Example |
-|---------|--------|---------|
-| **Local** | `/api/storage/buckets/{bucket}/objects/{key}` | `/api/storage/buckets/avatars/objects/user123.jpg` |
-| **S3 Public** | `https://{bucket}.s3.{region}.amazonaws.com/{key}` | `https://mybucket.s3.us-east-1.amazonaws.com/file.pdf` |
-| **S3 Presigned** | Time-limited URL with signature | Complex URL with query parameters |
+| Type | Use Case | Security |
+|------|----------|----------|
+| **Public Access** | Static assets, images | Direct S3 URLs |
+| **Presigned GET** | Private file access | Time-limited, single-use |
+| **Presigned POST** | Direct uploads | Validated, size-limited |
 
 ## Performance Optimizations
 
-### Caching Strategy
+### Performance Features
 
-- **CDN Integration**: CloudFront, Cloudflare (coming soon)
+- **Direct S3 Access**: Bypass API server for uploads/downloads
 - **Browser Caching**: Cache-Control headers
 - **ETag Support**: Conditional requests for S3
-- **Compression**: Response compression via middleware
+- **Parallel Uploads**: Support for multipart uploads
 
 ### Upload Methods
 
 **1. Direct Upload through API Server:**
 - Client sends file to `/api/storage/buckets/{bucket}/objects`
 - File passes through API server memory
-- Server writes to local disk or uploads to S3
+- Server uploads to S3
 - Limited by server memory (10MB default)
 
-**2. Presigned URL Upload (S3 only - Recommended):**
+**2. Presigned URL Upload (Recommended):**
 - Client requests upload URL from `/api/storage/buckets/{bucket}/upload-strategy`
 - Server returns presigned POST URL
 - Client uploads directly to S3 (bypasses API server)
@@ -257,10 +195,9 @@ CREATE TABLE _storage (
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `AWS_S3_BUCKET` | S3 bucket name (enables S3 backend) | `my-app-storage` |
+| `AWS_S3_BUCKET` | S3 bucket name | `my-app-storage` |
 | `AWS_REGION` | AWS region | `us-east-2` |
-| `APP_KEY` | App key for S3 multi-tenancy (required for S3) | `my-app-key` |
-| `STORAGE_DIR` | Local storage path (optional) | `./data/storage` |
+| `APP_KEY` | App key for S3 multi-tenancy | `my-app-key` |
 
 ### S3 Configuration
 

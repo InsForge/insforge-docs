@@ -261,7 +261,7 @@ const { data: posts, error } = await insforge.database
 ```
 
 <Note>
-To modify user data, use the auth methods like `insforge.auth.setProfile()`. The database API provides read-only access to user tables.
+To modify user data, use the auth methods like `insforge.auth.setProfile()`. The system restricts each user to only update their own data - users cannot delete their own records or modify other users' data.
 </Note>
 
 ## Best Practices
@@ -284,29 +284,5 @@ To modify user data, use the auth methods like `insforge.auth.setProfile()`. The
   </Card>
 </CardGroup>
 
-## Migration from REST API
-
-If you're currently using direct REST API calls, the SDK provides the same functionality with better developer experience:
-
-<CodeGroup>
-```javascript Before (REST API)
-fetch('/api/database/records/products', {
-  method: 'POST',
-  headers: { 
-    'Authorization': 'Bearer TOKEN',
-    'Content-Type': 'application/json',
-    'Prefer': 'return=representation'
-  },
-  body: JSON.stringify([{ name: 'Widget', price: 19.99 }])
-})
-```
-
-```javascript After (SDK)
-const { data, error } = await insforge.database
-  .from('products')
-  .insert({ name: 'Widget', price: 19.99 })
-  .select()
-```
-</CodeGroup>
 
 The SDK handles authentication tokens, request formatting, and response parsing automatically.

@@ -3,29 +3,11 @@ title: SDK
 description: Built-in user management with OAuth and profile support
 ---
 
+import Installation from '/snippets/sdk-installation.mdx';
+
 InsForge SDK provides complete authentication with JWT tokens, OAuth providers, and user profiles.
 
-<CodeGroup>
-```bash npm
-npm install @insforge/sdk
-```
-
-```bash yarn
-yarn add @insforge/sdk
-```
-
-```bash pnpm
-pnpm add @insforge/sdk
-```
-</CodeGroup>
-
-```javascript
-import { createClient } from '@insforge/sdk';
-
-const insforge = createClient({
-  baseUrl: 'https://your-app.us-east.insforge.app'
-});
-```
+<Installation />
 
 ## Basic Authentication
 

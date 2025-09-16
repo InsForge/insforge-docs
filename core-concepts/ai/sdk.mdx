@@ -3,29 +3,11 @@ title: SDK
 description: Integrated AI services for chat completions and image generation
 ---
 
+import Installation from '/snippets/sdk-installation.mdx';
+
 InsForge SDK provides seamless integration with multiple AI models through OpenRouter, supporting both chat completions and image generation.
 
-<CodeGroup>
-```bash npm
-npm install @insforge/sdk
-```
-
-```bash yarn
-yarn add @insforge/sdk
-```
-
-```bash pnpm
-pnpm add @insforge/sdk
-```
-</CodeGroup>
-
-```javascript
-import { createClient } from '@insforge/sdk';
-
-const insforge = createClient({
-  baseUrl: 'https://your-app.us-east.insforge.app'
-});
-```
+<Installation />
 
 ## Chat Completions
 

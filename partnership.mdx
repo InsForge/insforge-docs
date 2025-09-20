@@ -1,20 +1,20 @@
 ---
 title: Partner Integration
-description: Learn how to integrate Insforge as a partner platform through co-branded or white-label partnerships
+description: Learn how to integrate InsForge as a partner platform through co-branded or white-label partnerships
 ---
 
 import { Steps, Card, CardGroup, Tabs, Tab } from '@mintlify/components';
 
 ## Overview
 
-Insforge provides two partnership models that enable seamless integration of our Backend-as-a-Service platform into your applications. Whether you're looking for a co-branded solution or a fully white-labeled experience, we have the right partnership model for you.
+InsForge provides two partnership models that enable seamless integration of our Backend-as-a-Service platform into your applications. Whether you're looking for a co-branded solution or a fully white-labeled experience, we have the right partnership model for you.
 
 ## Partnership Models
 
 <CardGroup cols={2}>
   <Card title="Co-Branded Partnership" icon="handshake">
-    Perfect for platforms that want to offer Insforge alongside their services.
-    The integration process is remarkably simple - developers can connect to the Insforge platform with just one click, without complicated OAuth flows.
+    Perfect for platforms that want to offer InsForge alongside their services.
+    The integration process is remarkably simple - developers can connect to the InsForge platform with just one click, without complicated OAuth flows.
   </Card>
   <Card title="White-Label Partnership" icon="tag">
     Ideal for platforms seeking complete control over the user experience.
@@ -72,15 +72,15 @@ Insforge provides two partnership models that enable seamless integration of our
 ## Features by Partnership Type
 
 ### Co-Branded Features
-In co-branded mode, developers explicitly know they are Insforge platform users (linked through the same email address). After logging into the Insforge platform, developers have full management rights for projects created through partners and need to pay according to Insforge's billing plans.
+In co-branded mode, developers explicitly know they are InsForge platform users (linked through the same email address). After logging into the InsForge platform, developers have full management rights for projects created through partners and need to pay according to InsForge's billing plans.
 
 Partner platforms can:
-- ✅ Sync user accounts (name, email) with Insforge
-- ✅ Sync projects to Insforge
+- ✅ Sync user accounts (name, email) with InsForge
+- ✅ Sync projects to InsForge
 - ✅ Query project connection information to leverage the completed backend capabilities.
 
 ### White-Label Features
-In white-label mode, developers are not aware of Insforge's existence and cannot see partner-created projects on the Insforge platform.
+In white-label mode, developers are not aware of InsForge's existence and cannot see partner-created projects on the InsForge platform.
 
 Partner platforms can:
 - ✅ Create embedded projects
@@ -94,7 +94,7 @@ Partner platforms can:
   <Tab title="Co-Branded APIs">
 
     ### Connect User Account
-    Synchronize user account information with Insforge.
+    Synchronize user account information with InsForge.
 
     ```bash
     POST /partnership/v1/:partnerId/connect-user
@@ -147,7 +147,7 @@ Partner platforms can:
     ```
 
     #### Handling Project Limits
-    Note: Due to project limits on the Insforge free plan, project synchronization from partner platforms may fail. In such cases, the response will be:
+    Note: Due to project limits on the InsForge free plan, project synchronization from partner platforms may fail. In such cases, the response will be:
 
     ```json
     {
@@ -210,7 +210,7 @@ Partner platforms can:
       "success": true,
       "project": {
         "id": "uuid-string",
-        "access_host": "https://project.insforge.dev",
+        "access_host": "https://project.us-east.insforge.app",
         "api_key": "project-api-key",
         "status": "active"
       }
@@ -229,7 +229,7 @@ Partner platforms can:
     {
       "project": {
         "id": "uuid-string",
-        "access_host": "https://project.insforge.dev",
+        "access_host": "https://project.us-east.insforge.app",
         "api_key": "project-api-key",
         "status": "active"
       }
@@ -297,34 +297,34 @@ The following sequence diagram illustrates the integration flow for co-branded p
 sequenceDiagram
     participant User as End User
     participant Partner as Partner Platform
-    participant Insforge as Insforge API
-    participant Dashboard as Insforge Dashboard
+    participant InsForge as InsForge API
+    participant Dashboard as InsForge Dashboard
 
     User->>Partner: Sign up/Login
-    Partner->>Insforge: POST /connect-user<br/>(name, email)
-    Insforge-->>Partner: Return user account ID
+    Partner->>InsForge: POST /connect-user<br/>(name, email)
+    InsForge-->>Partner: Return user account ID
 
     User->>Partner: Create new project
-    Partner->>Insforge: POST /sync-project<br/>(userId, project_name)
+    Partner->>InsForge: POST /sync-project<br/>(userId, project_name)
 
     alt Success
-        Insforge-->>Partner: Return project details<br/>(id, access_host, api_key)
+        InsForge-->>Partner: Return project details<br/>(id, access_host, api_key)
         Partner->>Partner: Store project credentials
         Partner->>User: Show project ready
     else Project Limit Reached
-        Insforge-->>Partner: Return error + candidate projects
+        InsForge-->>Partner: Return error + candidate projects
         Partner->>User: Show existing projects to choose
         User->>Partner: Select existing project
-        Partner->>Insforge: GET /metadata<br/>(projectId)
-        Insforge-->>Partner: Return project details
+        Partner->>InsForge: GET /metadata<br/>(projectId)
+        InsForge-->>Partner: Return project details
     end
 
     User->>Partner: Use application features
-    Partner->>Insforge: API calls using project credentials
-    Insforge-->>Partner: Return data
+    Partner->>InsForge: API calls using project credentials
+    InsForge-->>Partner: Return data
     Partner-->>User: Display results
 
-    Note over User,Dashboard: User can also access Insforge Dashboard directly
+    Note over User,Dashboard: User can also access InsForge Dashboard directly
     User->>Dashboard: Login with same email
     Dashboard->>User: Full project management access
 ```
@@ -375,14 +375,14 @@ const createProject = async (userId: string, projectName: string) => {
 
 // 3. Use project credentials
 const useProject = async (project: any) => {
-  // Connect to Insforge project using returned credentials
-  const insforgeClient = new InsforgeClient({
+  // Connect to InsForge project using returned credentials
+  const insForgeClient = new InsForgeClient({
     baseUrl: project.access_host,
     apiKey: project.api_key
   });
 
-  // Now you can use all Insforge features
-  await insforgeClient.database.query('SELECT * FROM users');
+  // Now you can use all InsForge features
+  await insForgeClient.database.query('SELECT * FROM users');
 };
 ```
 
@@ -394,35 +394,35 @@ The following sequence diagram illustrates the integration flow for white-label 
 sequenceDiagram
     participant User as End User
     participant Partner as Partner Platform
-    participant Insforge as Insforge API
+    participant InsForge as InsForge API
 
-    Note over User,Insforge: User never interacts with Insforge directly
+    Note over User,InsForge: User never interacts with InsForge directly
 
     User->>Partner: Sign up/Login to partner platform
 
     User->>Partner: Create new project
-    Partner->>Insforge: POST /sync-embedded-project<br/>(project_name, region, instance_type)
-    Insforge-->>Partner: Return project details<br/>(id, access_host, api_key, status)
+    Partner->>InsForge: POST /sync-embedded-project<br/>(project_name, region, instance_type)
+    InsForge-->>Partner: Return project details<br/>(id, access_host, api_key, status)
     Partner->>Partner: Store project credentials
     Partner->>User: Show project ready
 
     User->>Partner: Use application features
-    Partner->>Insforge: API calls using project credentials
-    Insforge-->>Partner: Return data
+    Partner->>InsForge: API calls using project credentials
+    InsForge-->>Partner: Return data
     Partner-->>User: Display results
 
     User->>Partner: Request to pause project
-    Partner->>Insforge: POST /pause<br/>(projectId)
-    Insforge-->>Partner: Return status: paused
+    Partner->>InsForge: POST /pause<br/>(projectId)
+    InsForge-->>Partner: Return status: paused
     Partner->>User: Confirm project paused
 
     User->>Partner: Request to restore project
-    Partner->>Insforge: POST /restore<br/>(projectId)
-    Insforge-->>Partner: Return status: active
+    Partner->>InsForge: POST /restore<br/>(projectId)
+    InsForge-->>Partner: Return status: active
     Partner->>User: Confirm project active
 
-    Partner->>Insforge: GET /metadata<br/>(projectId)
-    Insforge-->>Partner: Return current project status
+    Partner->>InsForge: GET /metadata<br/>(projectId)
+    InsForge-->>Partner: Return current project status
 ```
 
 ```typescript
@@ -494,7 +494,7 @@ const restoreProject = async (projectId: string) => {
 ## Parameter and Response Reference
 
 ### Project Region Values
-Insforge provides global deployment capabilities. Each project can be deployed to different regions:
+InsForge provides global deployment capabilities. Each project can be deployed to different regions:
 - `us-east` - United States East Coast
 - `us-west` - United States West Coast
 - `ca-central` - Canada Central
@@ -503,7 +503,7 @@ Insforge provides global deployment capabilities. Each project can be deployed t
 Additional regions will be added based on demand.
 
 ### Project Instance Type Values
-Based on your project's business requirements, Insforge offers the following resource types:
+Based on your project's business requirements, InsForge offers the following resource types:
 - `nano` - Minimal resources for development
 - `small` - Light workloads
 - `medium` - Standard applications

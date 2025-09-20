@@ -30,7 +30,7 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["introduction", "quickstart", "mcp-installation"]
+            "pages": ["introduction", "quickstart", "mcp-installation", "partnership"]
           },
           {
             "group": "Core Concepts",

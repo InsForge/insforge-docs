@@ -1,0 +1,476 @@
+openapi: 3.0.3
+info:
+  title: Insforge Functions API
+  version: 1.0.0
+  description: Serverless functions running in Deno runtime
+
+paths:
+  /api/functions:
+    get:
+      summary: List all functions
+      description: Get all functions with their metadata
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of functions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FunctionMetadata'
+              example:
+                - id: "123e4567-e89b-12d3-a456-426614174000"
+                  slug: "hello-world"
+                  name: "Hello World Function"
+                  description: "Returns a greeting message"
+                  status: "active"
+                  created_at: "2024-01-21T10:30:00Z"
+                  updated_at: "2024-01-21T10:35:00Z"
+                  deployed_at: "2024-01-21T10:35:00Z"
+                - id: "223e4567-e89b-12d3-a456-426614174001"
+                  slug: "process-webhook"
+                  name: "Webhook Processor"
+                  description: "Processes incoming webhooks"
+                  status: "draft"
+                  created_at: "2024-01-22T14:20:00Z"
+                  updated_at: "2024-01-22T14:20:00Z"
+                  deployed_at: null
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Admin only
+        '500':
+          description: Failed to list functions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create new function
+      description: Create a new function with code that runs in Deno runtime
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - code
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  description: Display name for the function
+                  example: "Hello World Function"
+                slug:
+                  type: string
+                  pattern: '^[a-zA-Z0-9_-]+$'
+                  description: URL-friendly identifier (auto-generated from name if not provided)
+                  example: "hello-world"
+                code:
+                  type: string
+                  minLength: 1
+                  description: JavaScript/TypeScript code that exports an async function
+                  example: |
+                    export default async function(request) {
+                      const { name = 'World' } = await request.json();
+                      return new Response(
+                        JSON.stringify({ message: `Hello, ${name}!` }),
+                        { headers: { 'Content-Type': 'application/json' } }
+                      );
+                    }
+                description:
+                  type: string
+                  description: Description of what the function does
+                  example: "Returns a personalized greeting message"
+                status:
+                  type: string
+                  enum: ["draft", "active"]
+                  default: "active"
+                  description: Initial status (draft or active/deployed)
+      responses:
+        '201':
+          description: Function created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  function:
+                    $ref: '#/components/schemas/FunctionMetadata'
+              example:
+                success: true
+                function:
+                  id: "123e4567-e89b-12d3-a456-426614174000"
+                  slug: "hello-world"
+                  name: "Hello World Function"
+                  description: "Returns a greeting message"
+                  status: "active"
+                  created_at: "2024-01-21T10:30:00Z"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation:
+                  value:
+                    error: "Invalid request"
+                    details:
+                      - code: "too_small"
+                        minimum: 1
+                        path: ["name"]
+                        message: "Name is required"
+                dangerousCode:
+                  value:
+                    error: "Code contains potentially dangerous patterns"
+                    pattern: "/Deno\\.run/i"
+        '409':
+          description: Function slug already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Function with this slug already exists"
+                details: "duplicate key value violates unique constraint"
+        '500':
+          description: Failed to create function
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/functions/{slug}:
+    get:
+      summary: Get function details
+      description: Get a specific function including its code
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          description: Function slug identifier
+          example: "hello-world"
+      responses:
+        '200':
+          description: Function details with code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FunctionDetails'
+              example:
+                id: "123e4567-e89b-12d3-a456-426614174000"
+                slug: "hello-world"
+                name: "Hello World Function"
+                description: "Returns a greeting message"
+                code: |
+                  export default async function(request) {
+                    const { name = 'World' } = await request.json();
+                    return new Response(
+                      JSON.stringify({ message: `Hello, ${name}!` }),
+                      { headers: { 'Content-Type': 'application/json' } }
+                    );
+                  }
+                status: "active"
+                created_at: "2024-01-21T10:30:00Z"
+                updated_at: "2024-01-21T10:35:00Z"
+                deployed_at: "2024-01-21T10:35:00Z"
+        '404':
+          description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Function not found"
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - Admin only
+        '500':
+          description: Failed to get function
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update function
+      description: Update an existing function's code or metadata
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          description: Function slug identifier
+          example: "hello-world"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: New display name
+                code:
+                  type: string
+                  description: Updated function code
+                description:
+                  type: string
+                  description: Updated description
+                status:
+                  type: string
+                  enum: ["draft", "active", "error"]
+                  description: Function status
+      responses:
+        '200':
+          description: Function updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  function:
+                    $ref: '#/components/schemas/FunctionMetadata'
+              example:
+                success: true
+                function:
+                  id: "123e4567-e89b-12d3-a456-426614174000"
+                  slug: "hello-world"
+                  name: "Hello World Function v2"
+                  description: "Returns a greeting message"
+                  status: "active"
+                  updated_at: "2024-01-21T11:00:00Z"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Function not found"
+        '500':
+          description: Failed to update function
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete function
+      description: Permanently delete a function
+      tags:
+        - Admin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          description: Function slug identifier
+          example: "hello-world"
+      responses:
+        '200':
+          description: Function deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+              example:
+                success: true
+                message: "Function hello-world deleted successfully"
+        '404':
+          description: Function not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Function not found"
+        '500':
+          description: Failed to delete function
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /functions/{slug}:
+    all:
+      summary: Execute function
+      description: Execute a function with the provided request (supports all HTTP methods)
+      tags:
+        - Client
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-zA-Z0-9_-]+$'
+          description: Function slug identifier
+          example: "hello-world"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+            example:
+              name: "John"
+              age: 30
+      responses:
+        '200':
+          description: Function executed successfully
+          content:
+            '*/*':
+              schema:
+                type: object
+                additionalProperties: true
+              example:
+                message: "Hello, John!"
+        '404':
+          description: Function not found or not active
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Function not found or not active"
+        '500':
+          description: Function execution error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "Function execution failed"
+                message: "TypeError: Cannot read property 'name' of undefined"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    FunctionMetadata:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the function
+        slug:
+          type: string
+          description: URL-friendly identifier
+          example: "hello-world"
+        name:
+          type: string
+          description: Display name for the function
+          example: "Hello World Function"
+        description:
+          type: string
+          nullable: true
+          description: Description of what the function does
+        status:
+          type: string
+          enum: ["draft", "active", "error"]
+          description: Current status of the function
+        created_at:
+          type: string
+          format: date-time
+          description: When the function was created
+        updated_at:
+          type: string
+          format: date-time
+          description: When the function was last updated
+        deployed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: When the function was last deployed (null if never deployed)
+      required:
+        - id
+        - slug
+        - name
+        - status
+        - created_at
+        - updated_at
+
+    FunctionDetails:
+      allOf:
+        - $ref: '#/components/schemas/FunctionMetadata'
+        - type: object
+          properties:
+            code:
+              type: string
+              description: The function's JavaScript/TypeScript code
+          required:
+            - code
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: object
+            - type: object
+          description: Additional error details
+        message:
+          type: string
+          description: Detailed error message
+        pattern:
+          type: string
+          description: Pattern that caused validation failure (for dangerous code detection)

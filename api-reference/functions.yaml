@@ -339,9 +339,9 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
   /functions/{slug}:
-    all:
+    post:
       summary: Execute function
-      description: Execute a function with the provided request (supports all HTTP methods)
+      description: Execute a function with the provided request
       tags:
         - Client
       parameters:

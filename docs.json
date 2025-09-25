@@ -91,6 +91,14 @@
             "openapi": "/api-reference/ai.yaml"
           },
           {
+            "group": "Functions",
+            "openapi": "/api-reference/functions.yaml"
+          },
+          {
+            "group": "Secrets",
+            "openapi": "/api-reference/secrets.yaml"
+          },
+          {
             "group": "Logs",
             "openapi": "/api-reference/logs.yaml"
           },

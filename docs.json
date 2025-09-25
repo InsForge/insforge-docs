@@ -62,6 +62,13 @@
                   "core-concepts/ai/architecture",
                   "core-concepts/ai/sdk"
                 ]
+              },
+              {
+                "group": "Functions",
+                "pages": [
+                  "core-concepts/functions/architecture",
+                  "core-concepts/functions/sdk"
+                ]
               }
             ]
           }

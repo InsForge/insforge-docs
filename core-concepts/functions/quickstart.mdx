@@ -1,0 +1,364 @@
+---
+title: 'Functions Quickstart'
+description: 'Create and deploy your first Insforge function in 5 minutes'
+icon: 'rocket'
+---
+
+## Prerequisites
+
+Before you begin, make sure you have:
+
+<Steps>
+  <Step title="Insforge Backend Running">
+    Ensure your Insforge backend is running on port 7130
+  </Step>
+  <Step title="Admin Access Token">
+    You'll need an admin token to create and manage functions
+  </Step>
+  <Step title="API Testing Tool">
+    Have `curl`, Postman, or another API testing tool ready
+  </Step>
+</Steps>
+
+## Create Your First Function
+
+### Step 1: Write the Function Code
+
+Every function must export an async function that accepts a Request and returns a Response:
+
+```javascript
+module.exports = async function(request) {
+  // Parse request body
+  const { name = 'World' } = await request.json();
+  
+  // Return JSON response
+  return new Response(
+    JSON.stringify({ 
+      message: `Hello, ${name}!`,
+      timestamp: new Date().toISOString()
+    }),
+    { 
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    }
+  );
+}
+```
+
+### Step 2: Deploy the Function
+
+Use the admin API to create and deploy your function:
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:7130/api/functions \
+  -H "Authorization: Bearer YOUR_ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Hello World Function",
+    "slug": "hello-world",
+    "description": "My first Insforge function",
+    "code": "module.exports = async function(request) {\n  const { name = \"World\" } = await request.json();\n  \n  return new Response(\n    JSON.stringify({ \n      message: `Hello, ${name}!`,\n      timestamp: new Date().toISOString()\n    }),\n    { \n      status: 200,\n      headers: { \"Content-Type\": \"application/json\" }\n    }\n  );\n}",
+    "status": "active"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:7130/api/functions', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_ADMIN_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    name: 'Hello World Function',
+    slug: 'hello-world',
+    description: 'My first Insforge function',
+    code: `module.exports = async function(request) {
+      const { name = 'World' } = await request.json();
+      
+      return new Response(
+        JSON.stringify({ 
+          message: \`Hello, \${name}!\`,
+          timestamp: new Date().toISOString()
+        }),
+        { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }`,
+    status: 'active'
+  })
+});
+```
+
+</CodeGroup>
+
+### Step 3: Test Your Function
+
+Once deployed, test your function by making a request to its endpoint:
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:7130/functions/hello-world \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Insforge"}'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:7130/functions/hello-world', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ name: 'Insforge' })
+});
+
+const data = await response.json();
+console.log(data);
+// Output: { message: "Hello, Insforge!", timestamp: "2024-..." }
+```
+
+</CodeGroup>
+
+<Check>
+  **Success!** You've created and deployed your first Insforge function.
+</Check>
+
+## Add Authentication
+
+Functions can access user authentication through the Insforge SDK:
+
+```javascript
+module.exports = async function(request) {
+  // Extract user token from Authorization header
+  const authHeader = request.headers.get('Authorization');
+  const userToken = authHeader ? authHeader.replace('Bearer ', '') : null;
+  
+  if (!userToken) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  
+  // Create SDK client with user token
+  const client = createClient({ 
+    baseUrl: 'http://insforge:7130',
+    edgeFunctionToken: userToken
+  });
+  
+  // Get current user
+  const { data: userData, error } = await client.auth.getCurrentUser();
+  
+  if (!userData?.user) {
+    return new Response('Invalid token', { status: 401 });
+  }
+  
+  return new Response(
+    JSON.stringify({ 
+      message: `Hello, ${userData.profile?.nickname || userData.user.email}!`,
+      userId: userData.user.id
+    }),
+    { 
+      headers: { 'Content-Type': 'application/json' }
+    }
+  );
+}
+```
+
+Test with authentication:
+
+```bash
+curl -X POST http://localhost:7130/functions/hello-world \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer USER_JWT_TOKEN"
+```
+
+## Access Database
+
+Functions can perform database operations using the SDK:
+
+```javascript
+module.exports = async function(request) {
+  const authHeader = request.headers.get('Authorization');
+  const userToken = authHeader ? authHeader.replace('Bearer ', '') : null;
+  
+  // Initialize SDK client
+  const client = createClient({ 
+    baseUrl: 'http://insforge:7130',
+    edgeFunctionToken: userToken
+  });
+  
+  // Get current user
+  const { data: userData } = await client.auth.getCurrentUser();
+  
+  if (!userData?.user?.id) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  
+  // Create a new post
+  const { data: post, error } = await client.database
+    .from('posts')
+    .insert([{
+      user_id: userData.user.id,
+      title: 'Created from function',
+      content: 'This post was created by an Insforge function!'
+    }])
+    .select()
+    .single();
+  
+  if (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+  
+  return new Response(
+    JSON.stringify(post),
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+}
+```
+
+## Add Environment Variables
+
+### Step 1: Create a Secret
+
+```bash
+curl -X POST http://localhost:7130/api/secrets \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "STRIPE_API_KEY",
+    "value": "sk_test_..."
+  }'
+```
+
+### Step 2: Use in Your Function
+
+```javascript
+module.exports = async function(request) {
+  // Access secret value
+  const stripeKey = Deno.env.get('STRIPE_API_KEY');
+  
+  if (!stripeKey) {
+    return new Response('Stripe not configured', { status: 500 });
+  }
+  
+  // Use the secret for API calls
+  const stripeResponse = await fetch('https://api.stripe.com/v1/charges', {
+    headers: {
+      'Authorization': `Bearer ${stripeKey}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  return new Response('Payment processed', { status: 200 });
+}
+```
+
+## Handle Different HTTP Methods
+
+```javascript
+module.exports = async function(request) {
+  const url = new URL(request.url);
+  
+  // Route based on HTTP method
+  switch (request.method) {
+    case 'GET':
+      // Handle GET request
+      const id = url.searchParams.get('id');
+      return new Response(JSON.stringify({ method: 'GET', id }));
+      
+    case 'POST':
+      // Handle POST request
+      const body = await request.json();
+      return new Response(JSON.stringify({ method: 'POST', data: body }));
+      
+    case 'DELETE':
+      // Handle DELETE request
+      return new Response(JSON.stringify({ method: 'DELETE' }));
+      
+    default:
+      return new Response('Method not allowed', { status: 405 });
+  }
+}
+```
+
+## Enable CORS
+
+For browser-based applications, add CORS headers:
+
+```javascript
+module.exports = async function(request) {
+  // Define CORS headers
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+  };
+  
+  // Handle preflight OPTIONS request
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { 
+      status: 204, 
+      headers: corsHeaders 
+    });
+  }
+  
+  // Your function logic here
+  const response = { message: 'Hello from CORS-enabled function!' };
+  
+  // Return response with CORS headers
+  return new Response(
+    JSON.stringify(response),
+    { 
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+}
+```
+
+## Update Your Function
+
+To update an existing function:
+
+```bash
+curl -X PUT http://localhost:7130/api/functions/hello-world \
+  -H "Authorization: Bearer ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "// Updated function code here",
+    "description": "Updated description"
+  }'
+```
+
+## Monitor Function Execution
+
+Check function logs in the Deno runtime container:
+
+```bash
+docker logs insforge-deno -f
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="SDK Reference" icon="book" href="/core-concepts/functions/sdk">
+    Deep dive into the Functions SDK
+  </Card>
+  <Card title="Examples" icon="code" href="/core-concepts/functions/examples">
+    Explore advanced function examples
+  </Card>
+  <Card title="Secrets Management" icon="key" href="/core-concepts/functions/secrets">
+    Learn about secure secrets handling
+  </Card>
+  <Card title="Best Practices" icon="star" href="/core-concepts/functions/best-practices">
+    Follow security and performance guidelines
+  </Card>
+</CardGroup>
